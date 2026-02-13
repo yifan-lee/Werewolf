@@ -18,6 +18,7 @@ class GameManager:
         self.role_pool = ['Wolf']*4 + ['Villager']*4 + ['Seer', 'Witch', 'Hunter', 'Idiot']
         self.id_to_character = {}
         self.role_to_id = defaultdict(list)
+        self.sheriff_id = None
 
     def setup_game(self):
         # random.shuffle(self.role_pool)
@@ -73,9 +74,9 @@ class GameManager:
             if self.check_game_over(): 
                 break
             self.current_day += 1
-            # self.day_phase()
-            # if self.check_game_over(): 
-            #     break
+            self.day_phase()
+            if self.check_game_over(): 
+                break
 
     def check_game_over(self):
         wolf_ids = self.role_to_id['Wolf']
@@ -101,10 +102,6 @@ class GameManager:
                 print("所有神职死亡，狼人获胜")
             return(True)
         return(False)
-        
-        
-
-    
 
     def night_phase(self):
         if self.verbose:
@@ -156,8 +153,8 @@ class GameManager:
             else:
                 print("女巫选择不救人也不毒死")
         
-        # 4. 夜晚结算 (处理最终谁死了)
-        self.resolve_night_deaths(context)
+        # # 4. 夜晚结算 (处理最终谁死了)
+        # self.resolve_night_deaths(context)
 
     def get_game_context(self):
         return {
@@ -186,7 +183,47 @@ class GameManager:
             self.id_to_character[pid].player.is_alive = False
             if self.verbose:
                 print(f"玩家{pid}在夜晚死亡。")
+        return deaths_tonight
 
+    def day_phase(self):
+        if self.verbose:
+            print(f"--- 第 {self.current_day} 天开始 ---")
+
+        # 0. 选取警长
+        if self.current_day == 1:
+            if self.verbose:
+                print(f"警长竞选开始")
+            self.select_sheriff()
+            self.sheriff_id = self.role_to_id['Seer'][0]
+        
+        # 1. 结算前一晚的死亡
+        deaths_tonight = self.resolve_night_deaths(context)
+
+        # 2. 移交警长
+        if (self.sheriff_id is not None) and (self.sheriff_id in deaths_tonight):
+            previous_sheriff = self.id_to_character[self.sheriff_id]
+            new_sheriff_id = previous_sheriff.role.handle_sheriff_transfer(previous_sheriff, context)
+            self.id_to_character[self.sheriff_id].player.is_sheriff = False
+            self.id_to_character[new_sheriff_id].player.is_sheriff = True
+            self.sheriff_id = new_sheriff_id
+        
+
+        
+
+        # 1. 公民议事
+
+
+
+        # 2. 公民投票
+
+
+
+        # 3. 公民处决
+
+
+    def select_sheriff(self):
+        seer_id = self.role_to_id['Seer'][0]
+        self.characters[seer_id].player.is_sheriff = True
     
 if __name__ == "__main__":
     game_manager = GameManager()
