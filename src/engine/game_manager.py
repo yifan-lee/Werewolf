@@ -223,15 +223,15 @@ class GameManager:
 
         
 
-    #     # 1. 公民议事
+        # 4. 公民议事
+        self.public_discussion()
 
+        # 5. 公民投票
+        self.public_vote()
 
+        # 6. 公民处决
+        self.public_execution()
 
-    #     # 2. 公民投票
-
-
-
-    #     # 3. 公民处决
 
 
     def select_sheriff(self):
@@ -368,6 +368,158 @@ class GameManager:
         else:
             print("警长撕毁了警徽 (未找到继承入)")
             self.public_info['sheriff_id'] = None
+
+
+    
+    def public_discussion(self):
+        if self.verbose:
+            print(f"--- 公民议事开始 ---")
+            
+        alive_ids = list(self.public_info['alive_player_ids'])
+        # 可以随机顺序或者按座位号顺序发言，这里按座位号
+        alive_ids.sort()
+        
+        for pid in alive_ids:
+            character = self.characters[pid]
+            action = character.role.handle_public_discussion(character, self.public_info, self.private_info[self.current_day])
+            
+            if action:
+                if action['type'] == 'publish_info':
+                    # 预言家公开发言
+                    valid_ids = action['data']
+                    for char in self.characters:
+                        # 更新所有好人（非狼）的认知
+                        if char.player.player_id == pid: continue
+                        if char.role_name == 'Wolf': continue
+                        if not char.player.is_alive: continue
+                        
+                        for vid, role_type in valid_ids.items():
+                            if role_type == 'Wolf':
+                                char.player.beliefs[vid] = {r: (1.0 if r=='Wolf' else 0.0) for r in self.role_pool}
+                            else:
+                                char.player.beliefs[vid]['Wolf'] = 0.0
+                                
+                elif action['type'] == 'publish_silver_water':
+                    # 女巫公布银水
+                    target_id = action['target']
+                    for char in self.characters:
+                        if char.player.player_id == pid: continue
+                        if char.role_name == 'Wolf': continue
+                        
+                        # 更新认知：该玩家不是狼
+                        char.player.beliefs[target_id]['Wolf'] = 0.0
+
+    def public_vote(self):
+        if self.verbose:
+            print(f"--- 公民投票开始 ---")
+            
+        alive_ids = list(self.public_info['alive_player_ids'])
+        votes = {} # voter_id -> target_id
+        
+        for pid in alive_ids:
+            character = self.characters[pid]
+            # 传入 public_info 和 private_info
+            target_id = character.role.handle_public_vote(character, self.public_info, self.private_info[self.current_day])
+            if target_id is not None:
+                votes[pid] = target_id
+                if self.verbose:
+                    print(f"玩家 {pid} 投票给 {target_id}")
+            else:
+                if self.verbose:
+                    print(f"玩家 {pid} 弃权")
+                    
+        # 统计票数
+        if not votes:
+            if self.verbose:
+                print("无人投票，平安日")
+            self.public_info['vote_result'] = None
+            return
+            
+        vote_counts = Counter(votes.values())
+        
+        if self.verbose:
+            print(f"投票结果: {vote_counts}")
+            
+        # 找到票数最多的
+        max_votes = max(vote_counts.values())
+        candidates = [pid for pid, count in vote_counts.items() if count == max_votes]
+        
+        if len(candidates) > 1:
+            # 平票处理：简单起见，随机处决一个，或者（更规则的做法）进入PK发言，再次平票平安日。
+            # 为了简化模拟，随机处决一个
+            eliminated_id = random.choice(candidates)
+            if self.verbose:
+                print(f"平票 {candidates}，随机处决 {eliminated_id}")
+        else:
+            eliminated_id = candidates[0]
+            if self.verbose:
+                print(f"玩家 {eliminated_id} 被处决")
+                
+        self.public_info['vote_result'] = eliminated_id
+
+    def public_execution(self):
+        eliminated_id = self.public_info.get('vote_result')
+        
+        if eliminated_id is None:
+            if self.verbose:
+                print("无人被处决，进入黑夜")
+            return
+            
+        print(f"--- 玩家 {eliminated_id} 被公投处决 ---")
+        
+        # 执行死亡
+        self.id_to_character[eliminated_id].player.is_alive = False
+        self.public_info['alive_player_ids'].remove(eliminated_id)
+        
+        # 处决遗言（通常被公投的人有遗言）
+        character = self.characters[eliminated_id]
+        if hasattr(character.role, 'handle_death_speech'):
+            # 注意：这里的遗言处理逻辑与 death_speech 中的类似，但 death_speech 是处理昨晚死亡列表
+            # 这里是处理单一死亡。
+            # 为了复用逻辑，我们可以把 death_speech 的核心逻辑提取出来，或者在这里手动调用 handle_death_speech
+            # 简单起见，这里直接调用，并处理返回的 action
+            
+            print(f"--- 玩家 {eliminated_id} ({character.role_name}) 发表遗言 ---")
+            action = character.role.handle_death_speech(character, self.public_info, self.private_info[self.current_day])
+            
+            if action:
+                if action['type'] == 'eliminate':
+                    target_id = action['target']
+                    if target_id in self.public_info['alive_player_ids']:
+                        self.id_to_character[target_id].player.is_alive = False
+                        self.public_info['alive_player_ids'].remove(target_id)
+                        print(f"玩家 {target_id} 被带走死亡。")
+                        
+                        # 被带走的人也有遗言吗？
+                        # 如果是猎人带走，被带走的人通常有遗言。
+                        # 这里简略处理：递归调用比较麻烦，暂不处理被带走人的遗言
+                        
+                elif action['type'] == 'publish_info':
+                    valid_ids = action['data']
+                    for char in self.characters:
+                        if char.player.player_id == eliminated_id: continue
+                        if char.role_name == 'Wolf': continue
+                        if not char.player.is_alive: continue
+                        
+                        for vid, role_type in valid_ids.items():
+                            if role_type == 'Wolf':
+                                char.player.beliefs[vid] = {r: (1.0 if r=='Wolf' else 0.0) for r in self.role_pool}
+                            else:
+                                char.player.beliefs[vid]['Wolf'] = 0.0
+                                
+                elif action['type'] == 'publish_silver_water':
+                    # 女巫公布银水
+                    target_id = action['target']
+                    for char in self.characters:
+                        if char.player.player_id == eliminated_id: continue
+                        if char.role_name == 'Wolf': continue
+                        
+                        # 更新认知：该玩家不是狼
+                        char.player.beliefs[target_id]['Wolf'] = 0.0
+        
+        # 处决后，如果警长死了，移交警徽
+        if eliminated_id == self.public_info['sheriff_id']:
+            self.transfer_sheriff()
     
 if __name__ == "__main__":
     game = GameManager()

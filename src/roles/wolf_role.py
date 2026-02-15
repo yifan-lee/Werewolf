@@ -59,3 +59,8 @@ class WolfRole(BaseRole):
         # 如果没有队友（只剩自己），随机传给一个人（或者传给最像好人的装好人？）
         # 简单起见，随机传
         return random.choice(targets)
+
+    def handle_public_vote(self, character_obj, public_info, private_info):
+        # 狼人投给对狼人威胁最大的人，或者为了混淆视听投给被公投的人？
+        # 用户要求：和杀人逻辑一样 (即 handle_night_action)
+        return self.handle_night_action(character_obj, public_info)

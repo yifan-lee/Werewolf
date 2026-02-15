@@ -60,3 +60,8 @@ class SeerRole(BaseRole):
         
         print(f"预言家 {character_obj.player.player_id} 发动技能，公布查验信息: {self.valid_ids}")
         return {"type": "publish_info", "data": self.valid_ids}
+
+    def handle_public_discussion(self, character_obj, public_info, private_info):
+        # 预言家公开发言公布查验信息
+        print(f"预言家 {character_obj.player.player_id} 公开发言，公布查验信息: {self.valid_ids}")
+        return {"type": "publish_info", "data": self.valid_ids}

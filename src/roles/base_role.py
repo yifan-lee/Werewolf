@@ -49,6 +49,37 @@ class BaseRole:
         target = min(wolf_prop, key=wolf_prop.get)
         
         return target
+        
+    def handle_public_discussion(self, character_obj, public_info, private_info):
+        """
+        公开发言阶段，角色可以公布信息。
+        返回: dict 或 None
+        """
+        return None
+
+    def handle_public_vote(self, character_obj, public_info, private_info):
+        """
+        公开投票阶段。
+        返回: target_id
+        """
+        # 默认逻辑（好人）：投给最像狼的人
+        player = character_obj.player
+        alive_ids = public_info['alive_player_ids']
+        
+        # 排除自己
+        targets = [pid for pid in alive_ids if pid != player.player_id]
+        
+        if not targets:
+            return None
+            
+        # 找到最像狼（Wolf概率最高）的人
+        wolf_prop = {pid: player.beliefs[pid].get('Wolf', 0) for pid in targets}
+        # 如果所有人的 Wolf 概率都是 0 (比如初始状态)，随机投吗？或者不投？
+        # python max on empty sequence errors, but we checked targets.
+        # 如果 probabilities 都是一样的，max 会返回第一个。
+        target = max(wolf_prop, key=wolf_prop.get)
+        
+        return target
 
 class VillagerRole(BaseRole):
     def __init__(self):

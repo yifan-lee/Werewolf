@@ -50,6 +50,13 @@ class WitchRole(BaseRole):
             print(f"女巫 {character_obj.player.player_id} 发动技能，公布银水: {self.heal_target_id}")
             return {"type": "publish_silver_water", "target": self.heal_target_id}
         return None
+
+    def handle_public_discussion(self, character_obj, public_info, private_info):
+        # 如果女巫救过人，公布银水身份
+        if self.used_heal and self.heal_target_id is not None:
+            print(f"女巫 {character_obj.player.player_id} 公开发言，公布银水: {self.heal_target_id}")
+            return {"type": "publish_silver_water", "target": self.heal_target_id}
+        return None
              
     def handle_day_action(self, character_obj, context):
         pass
