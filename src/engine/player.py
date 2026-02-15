@@ -20,3 +20,4 @@ class Player:
         用于后续更新认知，role_probs 是一个字典，如 {"Wolf": 0.8, "Villager": 0.2}
         """
         self.beliefs[target_id] = role_probs
+        

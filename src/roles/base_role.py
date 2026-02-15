@@ -84,9 +84,3 @@ class BaseRole:
 class VillagerRole(BaseRole):
     def __init__(self):
         super().__init__("Villager")
-
-    def handle_night_action(self, player_obj, context):
-        pass
-
-    def handle_day_action(self, player_obj, context):
-        pass

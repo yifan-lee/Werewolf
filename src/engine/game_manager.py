@@ -5,7 +5,25 @@ from collections import defaultdict
 from engine.player import Player
 from engine.character import Character
 
+class GameContext:
+    def __init__(self, manager):
+        self._manager = manager
 
+    @property
+    def alive_players(self):
+        # 返回活着的玩家对象列表，方便进行过滤
+        return [p for p in self._manager.players if p.is_alive]
+
+    def get_public_role(self, player_id):
+        # 获取某个玩家公开跳的身份
+        return self._manager.players[player_id].public_role_claim
+
+    def is_game_over(self):
+        # 将胜负判定逻辑也封装在这里，供 GameManager 调用
+        wolves = [p for p in self.alive_players if p.role_name == "Wolf"]
+        return len(wolves) == 0 or len(wolves) >= (len(self.alive_players) / 2)
+
+        
 class GameManager:
     def __init__(self, verbose=True):
         self.verbose = verbose
