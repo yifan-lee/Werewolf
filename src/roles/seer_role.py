@@ -53,3 +53,10 @@ class SeerRole(BaseRole):
 
     def handle_day_action(self, character_obj, public_info, private_info):
         pass
+
+    def handle_death_speech(self, character_obj, public_info, private_info):
+        # 预言家死前公布所有查验信息
+        # 逻辑：更新所有好人（非狼人）的认知
+        
+        print(f"预言家 {character_obj.player.player_id} 发动技能，公布查验信息: {self.valid_ids}")
+        return {"type": "publish_info", "data": self.valid_ids}

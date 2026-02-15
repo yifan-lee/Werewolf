@@ -6,13 +6,14 @@ class WitchRole(BaseRole):
         super().__init__("Witch")
         self.used_poison = False
         self.used_heal = False
+        self.heal_target_id = None
 
     def handle_night_action(self, character_obj, public_info, private_info_today):
         heal_target = None
         poison_target = None
         
         player = character_obj.player
-        wolves_target = private_info_today['wolves_target']
+        wolves_target = private_info_today.get('wolves_target')
         
         # 1. 判定是否使用解药
         if not self.used_heal and wolves_target is not None:
@@ -20,6 +21,7 @@ class WitchRole(BaseRole):
              # 目前策略：只要有药且有人死就救 (可以根据需要优化策略，比如第一晚必救)
             heal_target = wolves_target
             self.used_heal = True
+            self.heal_target_id = heal_target # 记录被救玩家ID
             
             # 救人后更新认知：该玩家大概率是好人（也就是所谓的银水）
             # 注意：这里直接修改了 beliefs，可能需要更复杂的逻辑，比如仅仅标记为 "SilverWater"
@@ -37,13 +39,17 @@ class WitchRole(BaseRole):
             
             if wolf_prop:
                 most_suspicious_target = max(wolf_prop, key=wolf_prop.get)
-                # max_suspicion = wolf_prop[most_suspicious_target]
-                # if max_suspicion > 0.8:
-                if 1:
-                    poison_target = most_suspicious_target
-                    self.used_poison = True
+                poison_target = most_suspicious_target
+                self.used_poison = True
 
         return heal_target, poison_target
 
+    def handle_death_speech(self, character_obj, public_info, private_info):
+        # 如果女巫救过人，公布银水身份
+        if self.used_heal and self.heal_target_id is not None:
+            print(f"女巫 {character_obj.player.player_id} 发动技能，公布银水: {self.heal_target_id}")
+            return {"type": "publish_silver_water", "target": self.heal_target_id}
+        return None
+             
     def handle_day_action(self, character_obj, context):
         pass

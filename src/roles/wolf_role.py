@@ -38,3 +38,24 @@ class WolfRole(BaseRole):
 
     def handle_day_action(self, character_obj, context):
         pass
+
+    def handle_sheriff_transfer(self, character_obj, public_info, private_info):
+        # 狼人优先传给狼队友
+        player = character_obj.player
+        alive_ids = public_info['alive_player_ids']
+        
+        # 排除自己
+        targets = [pid for pid in alive_ids if pid != player.player_id]
+        
+        if not targets:
+            return None
+            
+        # 优先传给狼队友 (在 beliefs 中 Wolf=1.0 的)
+        team_mates = [pid for pid in targets if player.beliefs[pid].get('Wolf', 0) == 1.0]
+        
+        if team_mates:
+            return random.choice(team_mates)
+            
+        # 如果没有队友（只剩自己），随机传给一个人（或者传给最像好人的装好人？）
+        # 简单起见，随机传
+        return random.choice(targets)

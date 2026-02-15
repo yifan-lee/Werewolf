@@ -18,7 +18,6 @@ class GameManager:
         self.role_pool = ['Wolf']*4 + ['Villager']*4 + ['Seer', 'Witch', 'Hunter', 'Idiot']
         self.id_to_character = {}
         self.role_to_id = defaultdict(set)
-        self.sheriff_id = None
 
         self.public_info = None
         self.private_info = defaultdict(dict)
@@ -77,7 +76,7 @@ class GameManager:
             "gold_water_claims": {c.player.player_id: c.player.gold_water_claims for c in self.characters if c.player.is_alive},
             "silver_water_claims": {c.player.player_id: c.player.silver_water_claims for c in self.characters if c.player.is_alive},
             "public_claims": {c.player.player_id: c.player.public_role_claim for c in self.characters},
-            "sheriff_id": next((c.player.player_id for c in self.characters if c.player.is_sheriff), None),
+            "sheriff_id": self.public_info['sheriff_id'] if self.public_info else None,
             "current_day": self.current_day,
             # 这里还可以加入历史投票记录、已确认死亡名单等
         }
@@ -174,9 +173,6 @@ class GameManager:
             else:
                 print("女巫选择不救人也不毒死")
 
-        # return context
-        
-
     
 
     def resolve_night_deaths(self):
@@ -199,30 +195,30 @@ class GameManager:
             self.public_info['alive_player_ids'].remove(pid)
             if self.verbose:
                 print(f"玩家{pid}在夜晚死亡。")
+                
+        self.public_info['deaths'] = list(set(deaths_tonight))
         return deaths_tonight
 
     def day_phase(self):
-        self.resolve_night_deaths()
-    #     if self.verbose:
-    #         print(f"--- 第 {self.current_day} 天开始 ---")
-
-    #     # 0. 选取警长
-    #     if self.current_day == 1:
-    #         if self.verbose:
-    #             print(f"警长竞选开始")
-    #         self.select_sheriff()
-    #         self.sheriff_id = self.role_to_id['Seer'][0]
         
-    #     # 1. 结算前一晚的死亡
-    #     deaths_tonight = self.resolve_night_deaths(context)
+        if self.verbose:
+            print(f"--- 第 {self.current_day} 天开始 ---")
 
-    #     # 2. 移交警长
-    #     if (self.sheriff_id is not None) and (self.sheriff_id in deaths_tonight):
-    #         previous_sheriff = self.id_to_character[self.sheriff_id]
-    #         new_sheriff_id = previous_sheriff.role.handle_sheriff_transfer(previous_sheriff, context)
-    #         self.id_to_character[self.sheriff_id].player.is_sheriff = False
-    #         self.id_to_character[new_sheriff_id].player.is_sheriff = True
-    #         self.sheriff_id = new_sheriff_id
+        # 0. 选取警长
+        if self.current_day == 1:
+            if self.verbose:
+                print(f"警长竞选开始")
+            self.select_sheriff()
+            # This line is problematic, as it assumes Seer[0] is the sheriff. The sheriff is set in select_sheriff.
+        
+        # 1. 结算前一晚的死亡
+        self.resolve_night_deaths()
+
+        # 2. 发表遗言
+        self.death_speech()
+
+        # 3. 移交警长
+        self.transfer_sheriff()
         
 
         
@@ -238,11 +234,140 @@ class GameManager:
     #     # 3. 公民处决
 
 
-    # def select_sheriff(self):
-    #     seer_id = self.role_to_id['Seer'][0]
-    #     seer_role = self.id_to_character[seer_id].role
+    def select_sheriff(self):
+        # 1. 找到预言家并设为警长
+        seer_ids = list(self.role_to_id['Seer'])
+        if not seer_ids:
+            if self.verbose:
+                print("本局无预言家，无法选取警长")
+            return
 
-    #     self.characters[seer_id].player.is_sheriff = True
+        seer_id = seer_ids[0]
+        self.public_info['sheriff_id'] = seer_id
+        
+        if self.verbose:
+            print(f"玩家 {seer_id} 当选警长 (预言家自动当选)")
+            
+        # 2. 更新全员认知：相信警长就是预言家
+        for char in self.characters:
+            player = char.player
+            # 自己不用更新对自己身份的认知
+            if player.player_id == seer_id:
+                continue
+            
+            # 只有活着的玩家才需要更新认知(死人更新也没关系，但逻辑上是活人)
+            # 这里简单处理，全员更新
+            
+            # 获取 Seer 在该玩家信念中的位置
+            # 将 Seer 的概率设为 1.0，其他角色设为 0.0
+            new_probs = {role: 0.0 for role in self.role_pool if role in player.beliefs[seer_id]}
+            new_probs['Seer'] = 1.0
+            player.beliefs[seer_id] = new_probs
+
+
+    def death_speech(self):
+        # 获取昨晚死亡的玩家
+        # 注意：resolve_night_deaths 返回的是 deaths_tonight，但并没有保存到实例变量中供这里使用。
+        # 我们需要在 resolve_night_deaths 中保存，或者在这里重新计算，或者传入。
+        # 鉴于 resolve_night_deaths 已经修改了 is_alive，我们可以通过对比前一天的 alive_ids 和现在的来判断？
+        # 或者最简单的方式：resolve_night_deaths 将死亡名单存入 self.private_info[self.current_day]['deaths']
+        
+        # 让我们先修改 resolve_night_deaths 保存死亡名单
+        # (由于不能同时修改两个方法，我假设 resolve_night_deaths 已经保存了，或者我们需要在这里重新获取)
+        # 重新获取比较麻烦。我们先假设有一个 self.current_deaths 变量或者从 private_info 获取。
+        
+        # 为了不破坏现有结构，我选择先修改 resolve_night_deaths (在下一个 tool call)，现在先写框架。
+        # 假设 self.private_info[self.current_day]['deaths'] 存在。
+        
+        deaths = self.public_info.get('deaths', [])
+        
+        # 使用队列来处理链式死亡（如猎人带走的人又有遗言）
+        # 但通常只有夜晚死的人才有遗言（猎人带走的人通常也有）
+        # 简化处理：只处理昨晚死的，猎人带走的人立即处理其遗言
+        
+        processed_deaths = set()
+        
+        # 这是一个递归或者循环处理的过程
+        death_queue = list(deaths)
+        
+        while death_queue:
+            pid = death_queue.pop(0)
+            if pid in processed_deaths:
+                continue
+            processed_deaths.add(pid)
+            
+            character = self.characters[pid]
+            if not hasattr(character.role, 'handle_death_speech'):
+                continue
+                
+            print(f"--- 玩家 {pid} ({character.role_name}) 发表遗言 ---")
+            action = character.role.handle_death_speech(character, self.public_info, self.private_info[self.current_day])
+            
+            if action:
+                if action['type'] == 'eliminate':
+                    target_id = action['target']
+                    if target_id in self.public_info['alive_player_ids']:
+                        self.id_to_character[target_id].player.is_alive = False
+                        self.public_info['alive_player_ids'].remove(target_id)
+                        print(f"玩家 {target_id} 被带走死亡。")
+                        death_queue.append(target_id)
+                        
+                elif action['type'] == 'publish_info':
+                    # 预言家公布查验信息
+                    valid_ids = action['data']
+                    for char in self.characters:
+                         # 更新所有好人（非狼）的认知
+                        if char.player.player_id == pid: continue
+                        if char.role_name == 'Wolf': continue
+                        if not char.player.is_alive: continue
+                        
+                        for vid, role_type in valid_ids.items():
+                            # 简单更新：如果是 Wolf，设为 1.0；如果是 Villager，设 Seer/Villager/etc 概率
+                            # 简化：只更新 Wolf 概率
+                            if role_type == 'Wolf':
+                                char.player.beliefs[vid] = {r: (1.0 if r=='Wolf' else 0.0) for r in self.role_pool}
+                            else:
+                                # 如果是好人，则 Wolf 概率为 0
+                                # 这里我们简单地把 Wolf 概率置零，并归一化其他概率（或者简单地不归一化，只修改 Wolf）
+                                # 为了保持信念分布的合理性，最好是把 Wolf 的概率分配给其他角色
+                                # 但最简单的做法是直接设为 0
+                                char.player.beliefs[vid]['Wolf'] = 0.0
+                                
+                elif action['type'] == 'publish_silver_water':
+                    # 女巫公布银水
+                    target_id = action['target']
+                    for char in self.characters:
+                        if char.player.player_id == pid: continue
+                        if char.role_name == 'Wolf': continue
+                        
+                        # 更新认知：该玩家不是狼
+                        char.player.beliefs[target_id]['Wolf'] = 0.0
+
+    def transfer_sheriff(self):
+        sheriff_id = self.public_info['sheriff_id']
+        # 检查警长是否存活
+        if sheriff_id is None:
+            return
+            
+        current_sheriff_char = self.characters[sheriff_id]
+        if current_sheriff_char.player.is_alive:
+            return
+            
+        print(f"警长 {sheriff_id} 已死亡，正在移交警徽...")
+        
+        # 调用警长的移交逻辑
+        new_sheriff_id = current_sheriff_char.role.handle_sheriff_transfer(
+            current_sheriff_char, 
+            self.public_info, 
+            self.private_info[self.current_day]
+        )
+        
+        if new_sheriff_id is not None:
+            self.public_info['sheriff_id'] = new_sheriff_id
+            print(f"警徽移交给了 {new_sheriff_id}")
+        else:
+            print("警长撕毁了警徽 (未找到继承入)")
+            self.public_info['sheriff_id'] = None
     
 if __name__ == "__main__":
     game = GameManager()

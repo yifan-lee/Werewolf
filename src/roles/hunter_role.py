@@ -12,3 +12,21 @@ class HunterRole(BaseRole):
 
     def handle_day_action(self, player_obj, context):
         pass
+
+    def handle_death_speech(self, character_obj, public_info, private_info):
+        # 猎人死后开枪带走一人
+        player = character_obj.player
+        alive_ids = public_info['alive_player_ids']
+        
+        # 排除自己
+        targets = [pid for pid in alive_ids if pid != player.player_id]
+        
+        if not targets:
+            return None
+            
+        # 找到最像狼的人
+        wolf_prop = {pid: player.beliefs[pid].get('Wolf', 0) for pid in targets}
+        target = max(wolf_prop, key=wolf_prop.get)
+        
+        print(f"猎人 {player.player_id} 发动技能，带走了 {target}")
+        return {"type": "eliminate", "target": target}
