@@ -17,8 +17,11 @@ class GameManager:
         # 定义角色池
         self.role_pool = ['Wolf']*4 + ['Villager']*4 + ['Seer', 'Witch', 'Hunter', 'Idiot']
         self.id_to_character = {}
-        self.role_to_id = defaultdict(list)
+        self.role_to_id = defaultdict(set)
         self.sheriff_id = None
+
+        self.public_info = None
+        self.private_info = defaultdict(dict)
 
     def setup_game(self):
         # random.shuffle(self.role_pool)
@@ -28,10 +31,11 @@ class GameManager:
             character = Character(role_name, player)
             self.characters.append(character)
             self.id_to_character[i] = character
-            self.role_to_id[role_name].append(i)
+            self.role_to_id[role_name].add(i)
         
         # 初始化的关键：注入“绝对认知”
         self._initialize_beliefs()
+        self.public_info = self.get_game_public_info()
 
     def _initialize_beliefs(self):
         players_count = len(self.role_pool)
@@ -67,6 +71,16 @@ class GameManager:
                         probs[role] = remaining_role_count[role]/remaining_players_count
                 ob_player.beliefs[tar_player.player_id] = probs
 
+    def get_game_public_info(self):
+        return {
+            "alive_player_ids": {c.player.player_id for c in self.characters if c.player.is_alive},
+            "gold_water_claims": {c.player.player_id: c.player.gold_water_claims for c in self.characters if c.player.is_alive},
+            "silver_water_claims": {c.player.player_id: c.player.silver_water_claims for c in self.characters if c.player.is_alive},
+            "public_claims": {c.player.player_id: c.player.public_role_claim for c in self.characters},
+            "sheriff_id": next((c.player.player_id for c in self.characters if c.player.is_sheriff), None),
+            "current_day": self.current_day,
+            # 这里还可以加入历史投票记录、已确认死亡名单等
+        }
 
     def run_simulation(self):
         while not self.check_game_over():
@@ -78,25 +92,27 @@ class GameManager:
             if self.check_game_over(): 
                 break
 
+
     def check_game_over(self):
+        alive_ids = self.public_info['alive_player_ids']
         wolf_ids = self.role_to_id['Wolf']
         villager_ids = self.role_to_id['Villager']
-        good_ids = []
+        good_ids = set()
         for role, id in self.role_to_id.items():
             if (role != 'Wolf') and (role != 'Villager'):
-                good_ids.extend(id)
+                good_ids = good_ids.union(id)
         
-        if not any([self.id_to_character[wolf_id].player.is_alive for wolf_id in wolf_ids]):
+        if not alive_ids.intersection(wolf_ids):
             self.winner = 'Villager'
             if self.verbose:
                 print("所有狼人死亡，好人获胜")
             return(True)
-        if not any([self.id_to_character[villager_id].player.is_alive for villager_id in villager_ids]):
+        if not alive_ids.intersection(villager_ids):
             self.winner = 'Wolf'
             if self.verbose:
                 print("所有平民死亡，狼人获胜")
             return(True)
-        if not any([self.id_to_character[good_id].player.is_alive for good_id in good_ids]):
+        if not alive_ids.intersection(good_ids):
             self.winner = 'Wolf'
             if self.verbose:
                 print("所有神职死亡，狼人获胜")
@@ -106,19 +122,20 @@ class GameManager:
     def night_phase(self):
         if self.verbose:
             print(f"--- 第 {self.current_day} 晚开始 ---")
-        # 记录本晚发生的关键事件
-        context = self.get_game_context()
 
         # 1. 狼人行动
         if self.verbose:
             print(f"狼人请行动")
         target_ids = []
-        wolves = [c for c in self.characters if c.player.is_alive and c.role_name == "Wolf"]
+        wolves = [
+            self.characters[id] for id in self.role_to_id['Wolf'] 
+            if id in self.public_info['alive_player_ids']
+        ]
         for wolf in wolves:
-            target_id = wolf.role.handle_night_action(wolf, context)
+            target_id = wolf.role.handle_night_action(wolf, self.public_info)
             target_ids.append(target_id)
         wolves_target = max(set(target_ids), key=target_ids.count)
-        context['wolves_target'] = wolves_target
+        self.private_info[self.current_day]['wolves_target'] = wolves_target
         if self.verbose:
             print(f"狼人选择杀害{wolves_target}号玩家")
 
@@ -129,8 +146,12 @@ class GameManager:
         if seer is None:
             seer_target = None
         else:
-            seer_target = seer.role.handle_night_action(seer, context)
-        context['seer_target'] = seer_target
+            seer_target = seer.role.handle_night_action(seer, self.public_info)
+        self.private_info[self.current_day]['seer_target'] = seer_target
+        if seer_target is not None:
+            target_char = self.characters[seer_target]
+            is_good = target_char.role_name != 'Wolf'
+            seer.role.handle_check_result(seer, seer_target, is_good)
         if self.verbose:
             print(f"预言家选择查验{seer_target}号玩家")
         
@@ -142,9 +163,9 @@ class GameManager:
             witch_heal_target = None
             witch_poison_target = None
         else:
-            witch_heal_target, witch_poison_target = witch.role.handle_night_action(witch, context)
-        context['witch_heal_target'] = witch_heal_target
-        context['witch_poison_target'] = witch_poison_target
+            witch_heal_target, witch_poison_target = witch.role.handle_night_action(witch, self.public_info, self.private_info[self.current_day])
+        self.private_info[self.current_day]['witch_heal_target'] = witch_heal_target
+        self.private_info[self.current_day]['witch_poison_target'] = witch_poison_target
         if self.verbose:
             if witch_heal_target is not None:
                 print(f"女巫选择救{witch_heal_target}号玩家")
@@ -152,82 +173,79 @@ class GameManager:
                 print(f"女巫选择毒死{witch_poison_target}号玩家")
             else:
                 print("女巫选择不救人也不毒死")
+
+        # return context
         
-        # # 4. 夜晚结算 (处理最终谁死了)
-        # self.resolve_night_deaths(context)
 
-    def get_game_context(self):
-        return {
-            "alive_player_ids": [c.player.player_id for c in self.characters if c.player.is_alive],
-            "gold_water_claims": {c.player.player_id: c.player.gold_water_claims for c in self.characters if c.player.is_alive},
-            "silver_water_claims": {c.player.player_id: c.player.silver_water_claims for c in self.characters if c.player.is_alive},
-            "public_claims": {c.player.player_id: c.player.public_role_claim for c in self.characters},
-            "sheriff_id": next((c.player.player_id for c in self.characters if c.player.is_sheriff), None),
-            "current_day": self.current_day,
-            # 这里还可以加入历史投票记录、已确认死亡名单等
-        }
+    
 
-    def resolve_night_deaths(self, context):
+    def resolve_night_deaths(self):
         deaths_tonight = []
         
         # 处理狼刀
-        if context['wolves_target'] is not None and not context['witch_heal_target']:
-            deaths_tonight.append(context['wolves_target'])
+        if (
+            (self.private_info[self.current_day-1]['wolves_target'] is not None) and 
+            (not self.private_info[self.current_day-1]['witch_heal_target'])
+        ):
+            deaths_tonight.append(self.private_info[self.current_day-1]['wolves_target'])
         
         # 处理毒药
-        if context['witch_poison_target'] is not None:
-            deaths_tonight.append(context['witch_poison_target'])
+        if self.private_info[self.current_day-1]['witch_poison_target'] is not None:
+            deaths_tonight.append(self.private_info[self.current_day-1]['witch_poison_target'])
             
         # 执行死亡逻辑
         for pid in set(deaths_tonight):
             self.id_to_character[pid].player.is_alive = False
+            self.public_info['alive_player_ids'].remove(pid)
             if self.verbose:
                 print(f"玩家{pid}在夜晚死亡。")
         return deaths_tonight
 
     def day_phase(self):
-        if self.verbose:
-            print(f"--- 第 {self.current_day} 天开始 ---")
+        self.resolve_night_deaths()
+    #     if self.verbose:
+    #         print(f"--- 第 {self.current_day} 天开始 ---")
 
-        # 0. 选取警长
-        if self.current_day == 1:
-            if self.verbose:
-                print(f"警长竞选开始")
-            self.select_sheriff()
-            self.sheriff_id = self.role_to_id['Seer'][0]
+    #     # 0. 选取警长
+    #     if self.current_day == 1:
+    #         if self.verbose:
+    #             print(f"警长竞选开始")
+    #         self.select_sheriff()
+    #         self.sheriff_id = self.role_to_id['Seer'][0]
         
-        # 1. 结算前一晚的死亡
-        deaths_tonight = self.resolve_night_deaths(context)
+    #     # 1. 结算前一晚的死亡
+    #     deaths_tonight = self.resolve_night_deaths(context)
 
-        # 2. 移交警长
-        if (self.sheriff_id is not None) and (self.sheriff_id in deaths_tonight):
-            previous_sheriff = self.id_to_character[self.sheriff_id]
-            new_sheriff_id = previous_sheriff.role.handle_sheriff_transfer(previous_sheriff, context)
-            self.id_to_character[self.sheriff_id].player.is_sheriff = False
-            self.id_to_character[new_sheriff_id].player.is_sheriff = True
-            self.sheriff_id = new_sheriff_id
+    #     # 2. 移交警长
+    #     if (self.sheriff_id is not None) and (self.sheriff_id in deaths_tonight):
+    #         previous_sheriff = self.id_to_character[self.sheriff_id]
+    #         new_sheriff_id = previous_sheriff.role.handle_sheriff_transfer(previous_sheriff, context)
+    #         self.id_to_character[self.sheriff_id].player.is_sheriff = False
+    #         self.id_to_character[new_sheriff_id].player.is_sheriff = True
+    #         self.sheriff_id = new_sheriff_id
         
 
         
 
-        # 1. 公民议事
+    #     # 1. 公民议事
 
 
 
-        # 2. 公民投票
+    #     # 2. 公民投票
 
 
 
-        # 3. 公民处决
+    #     # 3. 公民处决
 
 
-    def select_sheriff(self):
-        seer_id = self.role_to_id['Seer'][0]
-        self.characters[seer_id].player.is_sheriff = True
+    # def select_sheriff(self):
+    #     seer_id = self.role_to_id['Seer'][0]
+    #     seer_role = self.id_to_character[seer_id].role
+
+    #     self.characters[seer_id].player.is_sheriff = True
     
 if __name__ == "__main__":
-    game_manager = GameManager()
-    game_manager.setup_game()
+    game = GameManager()
+    game.setup_game()
 
-    print(game_manager.characters[8].role_name)
-    print(game_manager.characters[8].player.beliefs[0])
+    game.run_simulation()

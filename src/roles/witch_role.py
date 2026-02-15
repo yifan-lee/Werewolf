@@ -7,27 +7,41 @@ class WitchRole(BaseRole):
         self.used_poison = False
         self.used_heal = False
 
-    def handle_night_action(self, character_obj, context):
+    def handle_night_action(self, character_obj, public_info, private_info_today):
         heal_target = None
         poison_target = None
-
+        
         player = character_obj.player
-        role = character_obj.role
+        wolves_target = private_info_today['wolves_target']
+        
+        # 1. 判定是否使用解药
+        if not self.used_heal and wolves_target is not None:
+             # 这里可以加入策略：比如如果是自己被杀，或者关键人物被杀，就救
+             # 目前策略：只要有药且有人死就救 (可以根据需要优化策略，比如第一晚必救)
+            heal_target = wolves_target
+            self.used_heal = True
+            
+            # 救人后更新认知：该玩家大概率是好人（也就是所谓的银水）
+            # 注意：这里直接修改了 beliefs，可能需要更复杂的逻辑，比如仅仅标记为 "SilverWater"
+            player.beliefs[heal_target]['Wolf'] = 0.0
 
-        my_beliefs = player.beliefs
-
-        if not role.used_heal:
-            my_beliefs[context['wolves_target']]['Wolf']=0
-            role.used_heal = True
-            heal_target = context['wolves_target']
-        elif not role.used_poison:
-            alive_ids = context["alive_player_ids"]
+        # 2. 判定是否使用毒药 (通常规则：一晚只能用一瓶药)
+        # 如果当晚没用解药，且还有毒药，且有怀疑对象，则用毒
+        if heal_target is None and not self.used_poison:
+            alive_ids = public_info["alive_player_ids"]
+            # 排除自己
             targets = [pid for pid in alive_ids if pid != player.player_id]
-            wolf_prop = {id: player.beliefs[id]['Wolf'] for id in targets}
-            poison_target = max(wolf_prop, key=wolf_prop.get)
-            role.used_poison = True
-        else:
-            pass
+            
+            # 找到最像狼的人
+            wolf_prop = {pid: player.beliefs[pid].get('Wolf', 0) for pid in targets}
+            
+            if wolf_prop:
+                most_suspicious_target = max(wolf_prop, key=wolf_prop.get)
+                # max_suspicion = wolf_prop[most_suspicious_target]
+                # if max_suspicion > 0.8:
+                if 1:
+                    poison_target = most_suspicious_target
+                    self.used_poison = True
 
         return heal_target, poison_target
 
