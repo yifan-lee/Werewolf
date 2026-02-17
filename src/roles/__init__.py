@@ -1,8 +1,8 @@
 
-from src.roles.role import Role
-from src.roles.villager import Villager
-from src.roles.werewolf import Werewolf
-from src.roles.seer import Seer
-from src.roles.witch import Witch
-from src.roles.hunter import Hunter
-from src.roles.idiot import Idiot
+from roles.role import Role
+from roles.villager import Villager
+from roles.werewolf import Werewolf
+from roles.seer import Seer
+from roles.witch import Witch
+from roles.hunter import Hunter
+from roles.idiot import Idiot
