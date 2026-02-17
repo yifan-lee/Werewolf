@@ -44,11 +44,21 @@ class Role(ABC):
         """
         pass
 
-    def vote(self, game: 'WerewolfGame', alive_players: List['Player'], knowledge_prob: Dict[int, Dict[RoleType, float]]) -> Optional['Player']:
+    def vote(self, game: 'WerewolfGame', alive_players: List['Player'], knowledge_prob: Dict[int, Dict[RoleType, float]], my_player: 'Player', leader_suggestion: Optional['Player'] = None) -> Optional['Player']:
         """
         Vote for a player during the day.
-        Default (Good): Vote for the player with highest Werewolf probability.
+        Priority:
+        1. Follow Leader Suggestion (Seer/Sheriff)
+        2. Own Suspect (Default)
         """
+        
+        # 1. Follow Leader Suggestion
+        # If a leader suggestion is provided, and I am not the leader (handled by caller passing None to leader),
+        # AND the suggestion is not ME (I won't vote for myself if suggested), follow it.
+        if leader_suggestion and leader_suggestion != my_player:
+            return leader_suggestion
+
+        # Default: Vote for own most suspicious target
         best_targets = []
         max_wolf_prob = -1.0
         
@@ -71,7 +81,6 @@ class Role(ABC):
         if not best_targets:
             return None
             
-        
         return random.choice(best_targets)
 
     def handle_vote_execution(self, game: 'WerewolfGame', my_player: 'Player') -> bool:
