@@ -203,11 +203,11 @@ class WerewolfGame:
             
         # 3. Vote / Elect
         # Prompt: "最后预言家当选警长" (Seer wins)
-        # We look for Seer among candidates
-        seer_candidate = next((p for p in candidates if p.role.role_type == RoleType.SEER), None)
+        # We look for Seers among candidates (random among seers if multiple)
+        seers = [p for p in candidates if p.role.role_type == RoleType.SEER]
         
-        if seer_candidate:
-            self.sheriff = seer_candidate
+        if seers:
+            self.sheriff = random.choice(seers)
         else:
             # If Seer is not running (dead?), pick random candidate or Witch?
             # Default to random candidate if Seer dead
@@ -278,7 +278,10 @@ class WerewolfGame:
             vote_details = ", ".join([f"Player {p.id}: {c}" for p, c in votes.items()])
             logger.info(f"Vote Counts: {vote_details}")
             
-            executed = max(votes, key=votes.get)
+            max_votes = max(votes.values())
+            executed_candidates = [p for p, c in votes.items() if c == max_votes]
+            executed = random.choice(executed_candidates)
+            
             logger.info(f"Voting Result: Player {executed.id} is executed!")
             
             # Delegate execution handling to Role (e.g. Idiot check)

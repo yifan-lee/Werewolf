@@ -1,6 +1,7 @@
 from roles.role import Role
 from config import RoleType
 from typing import TYPE_CHECKING
+from utils import logger
 
 if TYPE_CHECKING:
     from game import WerewolfGame
@@ -18,11 +19,11 @@ class Idiot(Role):
         if not self.revealed:
             # First time voted out: Reveal and survive
             self.revealed = True
-            from utils import logger
+            
             logger.info(f"Player {my_player.id} flips card: I am an IDIOT!")
             
             # Update all players' knowledge
-            from config import RoleType
+            
             for p in game.players:
                 p.mark_role_certain(my_player.id, RoleType.IDIOT)
                 

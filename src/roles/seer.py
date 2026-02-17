@@ -3,9 +3,12 @@
 from typing import List, Dict, TYPE_CHECKING
 from roles.role import Role
 from config import RoleType
+import random
+from utils import logger
 
 if TYPE_CHECKING:
     from player import Player
+    from game import WerewolfGame
 
 class Seer(Role):
     def __init__(self):
@@ -28,23 +31,28 @@ class Seer(Role):
         if not candidates:
             return None
             
-        # Prioritize highest Wolf probability
-        best_target = None
+        # Prioritize highest Wolf probability (random among ties)
+        best_targets = []
         max_wolf_prob = -1.0
         
         for p in candidates:
             probs = knowledge_prob.get(p.id, {})
             wolf_prob = probs.get(RoleType.WEREWOLF, 0.0)
             
-            # Simple tie-breaking
             if wolf_prob > max_wolf_prob:
                 max_wolf_prob = wolf_prob
-                best_target = p
+                best_targets = [p]
+            elif wolf_prob == max_wolf_prob and max_wolf_prob >= 0:
+                best_targets.append(p)
         
-        return best_target
+        if not best_targets:
+            return None
+            
+        
+        return random.choice(best_targets)
 
     def share_information(self, my_player: 'Player', all_players: List['Player']):
-        from utils import logger
+        
         
         # 1. Share results of previous checks
         for pid, probs in my_player.knowledge_prob.items():
@@ -70,8 +78,11 @@ class Seer(Role):
             candidates = [p for p in all_players if p.is_alive and p.id != my_player.id and p.id not in checked_ids]
             
             if candidates:
-                # Pick most suspicious for future check
-                self.badge_flow_target = max(candidates, key=lambda p: my_player.knowledge_prob.get(p.id, {}).get(RoleType.WEREWOLF, 0.0)).id
+                # Pick most suspicious for future check (random among ties)
+                max_wolf_prob = max(my_player.knowledge_prob.get(p.id, {}).get(RoleType.WEREWOLF, 0.0) for p in candidates)
+                top_candidates = [p for p in candidates if my_player.knowledge_prob.get(p.id, {}).get(RoleType.WEREWOLF, 0.0) == max_wolf_prob]
+                
+                self.badge_flow_target = random.choice(top_candidates).id
                 logger.info(f"[Discussion] Seer {my_player.id} announces Badge Flow: Tonight will check Player {self.badge_flow_target}. If Good -> Transfer to them; If Wolf -> Transfer to previously known good.")
 
         # 3. Reveal self as Seer
@@ -81,8 +92,8 @@ class Seer(Role):
 
     def choose_successor(self, game: 'WerewolfGame', alive_players: List['Player'], knowledge_prob: Dict[int, Dict[RoleType, float]]) -> 'Player':
         # Seer Badge Flow logic
-        import random
-        from utils import logger
+        
+        
         
         if self.badge_flow_target:
             target_id = self.badge_flow_target

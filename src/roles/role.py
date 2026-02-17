@@ -3,6 +3,7 @@
 from abc import ABC, abstractmethod
 from typing import List, TYPE_CHECKING, Dict, Optional
 from config import RoleType
+import random
 
 if TYPE_CHECKING:
     from player import Player
@@ -32,7 +33,6 @@ class Role(ABC):
         Choose a successor for Sheriff if this player dies as Sheriff.
         Default: Random alive player.
         """
-        import random
         if not alive_players:
             return None
         return random.choice(alive_players)
@@ -49,7 +49,7 @@ class Role(ABC):
         Vote for a player during the day.
         Default (Good): Vote for the player with highest Werewolf probability.
         """
-        best_target = None
+        best_targets = []
         max_wolf_prob = -1.0
         
         badge_flow_target_id = game.get_badge_flow_target()
@@ -64,9 +64,15 @@ class Role(ABC):
              
              if wolf_prob > max_wolf_prob:
                  max_wolf_prob = wolf_prob
-                 best_target = p
+                 best_targets = [p]
+             elif wolf_prob == max_wolf_prob and max_wolf_prob >= 0:
+                 best_targets.append(p)
                   
-        return best_target
+        if not best_targets:
+            return None
+            
+        
+        return random.choice(best_targets)
 
     def handle_vote_execution(self, game: 'WerewolfGame', my_player: 'Player') -> bool:
         """
