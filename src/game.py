@@ -135,7 +135,7 @@ class WerewolfGame:
             # Poison Logic
             # Only allow poison if no drug used yet (Antidote and Poison cannot be used same night)
             if not used_drug:
-                poison_target = witch.role.choose_poison_target([p for p in self.get_alive_players() if p != witch], witch.knowledge_prob)
+                poison_target = witch.role.choose_poison_target(self, [p for p in self.get_alive_players() if p != witch], witch.knowledge_prob)
                 if poison_target:
                     logger.info(f"Witch uses poison on Player {poison_target.id}")
                     witch.role.use_poison()
@@ -257,7 +257,7 @@ class WerewolfGame:
             valid_targets = [p for p in candidates] # Everyone is a valid target
             
             # Delegate to Role
-            vote_target = voter.role.vote(valid_targets, voter.knowledge_prob)
+            vote_target = voter.role.vote(self, valid_targets, voter.knowledge_prob)
             
             # Fallback if None (e.g. no info)? Random other
             if not vote_target:
@@ -296,14 +296,23 @@ class WerewolfGame:
             self.sheriff = None
             return
 
-        next_sheriff = dead_player.role.choose_successor(candidates, dead_player.knowledge_prob)
+        next_sheriff = dead_player.role.choose_successor(self, candidates, dead_player.knowledge_prob)
         
         if next_sheriff:
             self.sheriff = next_sheriff
             self.sheriff.sheriff = True
             logger.info(f"New Sheriff is Player {self.sheriff.id}")
         else:
-             logger.info("Sheriff died effectively without successor (rare).")
              self.sheriff = None
+
+    def get_badge_flow_target(self) -> Optional[int]:
+        """
+        Find the current Seer and return their badge flow target.
+        Only valid if the Seer is alive and is the Sheriff.
+        """
+        for p in self.players:
+            if p.role.role_type == RoleType.SEER and p.is_alive and p.sheriff:
+                return getattr(p.role, 'badge_flow_target', None)
+        return None
 
 

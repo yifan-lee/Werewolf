@@ -36,15 +36,17 @@ class Witch(Role):
         # Prompt says "默认救" (Default save).
         return True
 
-    def choose_poison_target(self, alive_players: List['Player'], knowledge_prob: Dict[int, Dict[RoleType, float]]) -> Optional['Player']:
+    def choose_poison_target(self, game: 'WerewolfGame', alive_players: List['Player'], knowledge_prob: Dict[int, Dict[RoleType, float]]) -> Optional['Player']:
         """
         Decide whether to poison someone and whom.
         """
         if not self.has_poison:
             return None
             
+        badge_flow_target_id = game.get_badge_flow_target()
+        
         # Find most suspicious target > 25% wolf prob
-        potential_targets = [p for p in alive_players] 
+        potential_targets = [p for p in alive_players if p.id != badge_flow_target_id] 
         
         best_target = None
         max_wolf_prob = 0.0
@@ -56,10 +58,6 @@ class Witch(Role):
                 max_wolf_prob = wolf_prob
                 best_target = p
         
-        if best_target and max_wolf_prob > 0.25:
-             return best_target
-             
-        return None
         if best_target and max_wolf_prob > 0.25:
              return best_target
              
@@ -97,11 +95,11 @@ class Witch(Role):
         for p in all_players:
             p.mark_role_certain(my_player.id, RoleType.WITCH)
 
-    def choose_successor(self, alive_players: List['Player'], knowledge_prob: Dict[int, Dict[RoleType, float]]) -> 'Player':
+    def choose_successor(self, game: 'WerewolfGame', alive_players: List['Player'], knowledge_prob: Dict[int, Dict[RoleType, float]]) -> 'Player':
         # Witch chooses the player she saved (Silver Water) if alive
         for p in alive_players:
             if p.saved: # Assuming p.saved checks the flag
                 return p
         
-        return super().choose_successor(alive_players, knowledge_prob)
+        return super().choose_successor(game, alive_players, knowledge_prob)
 

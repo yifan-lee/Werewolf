@@ -20,14 +20,27 @@ class Hunter(Role):
         # Check if poisoned (Witch logic interaction needed, but for now allow shoot)
         if not my_player.poisoned:
             logger.info(f"Hunter {my_player.id} triggers skill!")
-            targets = game.get_alive_players()
+            badge_flow_target_id = game.get_badge_flow_target()
+            
+            targets = [p for p in game.get_alive_players() if p.id != badge_flow_target_id and p.id != my_player.id]
             if targets:
-                shot = random.choice(targets)
-                logger.info(f"Hunter shoots Player {shot.id}")
-                shot.die()
+                # Select target with highest Wolf probability
+                shot = None
+                max_wolf_prob = -1.0
                 
-                # Handle consequences of shot player dying
-                game.handle_sheriff_death(shot)
-                # Recursive death handling
-                shot.role.on_death(game, shot)
+                for p in targets:
+                    probs = my_player.knowledge_prob.get(p.id, {})
+                    wolf_prob = probs.get(RoleType.WEREWOLF, 0.0)
+                    if wolf_prob > max_wolf_prob:
+                        max_wolf_prob = wolf_prob
+                        shot = p
+                
+                if shot:
+                    logger.info(f"Hunter shoots Player {shot.id} (Wolf Prob: {max_wolf_prob:.2f})")
+                    shot.die()
+                    
+                    # Handle consequences of shot player dying
+                    game.handle_sheriff_death(shot)
+                    # Recursive death handling
+                    shot.role.on_death(game, shot)
 

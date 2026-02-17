@@ -24,11 +24,11 @@ class Werewolf(Role):
         
         # 4. Silver Water (Saved by witch)
         if target.saved:
-            score += 300
+            score += 200
             
         # 5. Gold Water (Confirmed Good by Seer - visible reveal)
         if target.is_gold_water:
-            score += 200
+            score += 300
         
         # 6. Sheriff
         if target.sheriff:
@@ -47,15 +47,16 @@ class Werewolf(Role):
         best_target = max(potential_targets, key=lambda t: self.calculate_kill_score(t, knowledge_prob))
         return best_target
 
-    def choose_successor(self, alive_players: List['Player'], knowledge_prob: Dict[int, Dict[RoleType, float]]) -> 'Player':
+    def choose_successor(self, game: 'WerewolfGame', alive_players: List['Player'], knowledge_prob: Dict[int, Dict[RoleType, float]]) -> 'Player':
         # Werewolf chooses a teammate
         import random
         teammates = [p for p in alive_players if p.role.role_type == RoleType.WEREWOLF]
         if teammates:
             return random.choice(teammates)
             
-        return super().choose_successor(alive_players, knowledge_prob)
+        return super().choose_successor(game, alive_players, knowledge_prob)
 
-    def vote(self, alive_players: List['Player'], knowledge_prob: Dict[int, Dict[RoleType, float]]) -> Optional['Player']:
-        # Werewolf voting logic is same as kill target (strategic)
-        return self.choose_kill_target(alive_players, knowledge_prob)
+    ## 假装一下好人，按照好人的方式投票
+    # def vote(self, game: 'WerewolfGame', alive_players: List['Player'], knowledge_prob: Dict[int, Dict[RoleType, float]]) -> Optional['Player']:
+    #     # Werewolf voting logic is same as kill target (strategic)
+    #     return self.choose_kill_target(alive_players, knowledge_prob)

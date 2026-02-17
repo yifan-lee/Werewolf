@@ -27,7 +27,7 @@ class Role(ABC):
         """
         pass
 
-    def choose_successor(self, alive_players: List['Player'], knowledge_prob: Dict[str, any]) -> 'Player':
+    def choose_successor(self, game: 'WerewolfGame', alive_players: List['Player'], knowledge_prob: Dict[str, any]) -> 'Player':
         """
         Choose a successor for Sheriff if this player dies as Sheriff.
         Default: Random alive player.
@@ -44,7 +44,7 @@ class Role(ABC):
         """
         pass
 
-    def vote(self, alive_players: List['Player'], knowledge_prob: Dict[int, Dict[RoleType, float]]) -> Optional['Player']:
+    def vote(self, game: 'WerewolfGame', alive_players: List['Player'], knowledge_prob: Dict[int, Dict[RoleType, float]]) -> Optional['Player']:
         """
         Vote for a player during the day.
         Default (Good): Vote for the player with highest Werewolf probability.
@@ -52,22 +52,20 @@ class Role(ABC):
         best_target = None
         max_wolf_prob = -1.0
         
-        # Filter out self? The caller (Game) usually handles "others", but here we get valid candidates.
-        # Usually one doesn't vote for self, but valid candidates are passed in?
-        # Let's assume alive_players includes everyone.
+        badge_flow_target_id = game.get_badge_flow_target()
         
         for p in alive_players:
-             # Don't vote for self usually, but depends on rules. 
-             # Let's assume we can vote anyone in list. Game should pass valid candidates.
-             # Actually Game passes all alive players.
-             
+             # Skip badge flow target if I am Good
+             if self.role_type != RoleType.WEREWOLF and badge_flow_target_id is not None and p.id == badge_flow_target_id:
+                 continue
+
              probs = knowledge_prob.get(p.id, {})
              wolf_prob = probs.get(RoleType.WEREWOLF, 0.0)
              
              if wolf_prob > max_wolf_prob:
                  max_wolf_prob = wolf_prob
                  best_target = p
-                 
+                  
         return best_target
 
     def handle_vote_execution(self, game: 'WerewolfGame', my_player: 'Player') -> bool:
