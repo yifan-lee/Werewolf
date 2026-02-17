@@ -1,6 +1,8 @@
-from .base_role import BaseRole, VillagerRole
-from .wolf_role import WolfRole
-from .seer_role import SeerRole
-from .witch_role import WitchRole
-from .hunter_role import HunterRole
-from .idiot_role import IdiotRole
+
+from roles.role import Role
+from roles.villager import Villager
+from roles.werewolf import Werewolf
+from roles.seer import Seer
+from roles.witch import Witch
+from roles.hunter import Hunter
+from roles.idiot import Idiot
