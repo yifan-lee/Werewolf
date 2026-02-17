@@ -147,7 +147,7 @@ class WerewolfGame:
 
 
     def run_day(self, night_deaths: Dict[Player, str]):
-        self.day_count += 1 # Actually day count is same as night usually, but let's keep it simple
+        # Day count matches the preceding night count
         logger.info(f"\n--- Day {self.day_count} ---")
         
         # 1. Sheriff Election (Day 1 only if enabled)
