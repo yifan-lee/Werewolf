@@ -4,7 +4,9 @@
 
 ## 使用方法
 
-uv run python ./src/main.py
+uv run python ./src/main.py -n <想要蒙特卡洛的次数>
+
+次数设置为1的话会有游戏流程log
 
 ## 角色
 
