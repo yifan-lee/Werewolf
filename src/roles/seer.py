@@ -1,6 +1,6 @@
 
 
-from typing import List, Dict, TYPE_CHECKING
+from typing import List, Dict, TYPE_CHECKING, Optional
 from roles.role import Role
 from config import RoleType
 import random
@@ -16,6 +16,33 @@ class Seer(Role):
         self.checked_players = [] # List of player IDs in order of check
         self.sheriff_candidacy_prob = 1.0
         self.badge_flow_target: Optional[int] = None # Player ID
+
+    def vote(self, game: 'WerewolfGame', alive_players: List['Player'], knowledge_prob: Dict[int, Dict[RoleType, float]], my_player: 'Player', leader_suggestion: Optional['Player'] = None) -> Optional['Player']:
+        # Seer always votes for their most suspicious target (independent)
+        best_targets = []
+        max_wolf_prob = -1.0
+        
+        badge_flow_target_id = game.get_badge_flow_target()
+        
+        for p in alive_players:
+             # Skip badge flow target if I am Good (Seer avoids voting for their own future check unless certain)
+             # Actually, Seer checking someone doesn't mean they can't vote for them if they are already suspicious.
+             # But let's keep consistency: if badge flow target logic applies generally.
+             # However, Seer KNOWS who they checked.
+             
+             probs = knowledge_prob.get(p.id, {})
+             wolf_prob = probs.get(RoleType.WEREWOLF, 0.0)
+             
+             if wolf_prob > max_wolf_prob:
+                 max_wolf_prob = wolf_prob
+                 best_targets = [p]
+             elif wolf_prob == max_wolf_prob and max_wolf_prob >= 0:
+                 best_targets.append(p)
+                  
+        if not best_targets:
+            return None
+            
+        return random.choice(best_targets)
 
     def choose_check_target(self, alive_players: List['Player'], knowledge_prob: Dict[int, Dict[RoleType, float]]) -> 'Player':
         # If there's an announced badge flow target, try to check them first

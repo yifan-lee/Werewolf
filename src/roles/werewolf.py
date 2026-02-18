@@ -71,9 +71,7 @@ class Werewolf(Role):
             
         return super().choose_successor(game, alive_players, knowledge_prob)
 
-    ## 假装一下好人，按照好人的方式投票
-
-
-    def vote(self, game: 'WerewolfGame', alive_players: List['Player'], knowledge_prob: Dict[int, Dict[RoleType, float]]) -> Optional['Player']:
-        # Werewolf voting logic is same as kill target (strategic)
-        return self.choose_kill_target(alive_players, knowledge_prob)
+    # ## 假装一下好人，按照好人的方式投票
+    # def vote(self, game: 'WerewolfGame', alive_players: List['Player'], knowledge_prob: Dict[int, Dict[RoleType, float]], my_player: 'Player', leader_suggestion: Optional['Player'] = None) -> Optional['Player']:
+    #     # Werewolf voting logic is same as kill target (strategic)
+    #     return self.choose_kill_target(alive_players, knowledge_prob)

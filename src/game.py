@@ -237,7 +237,7 @@ class WerewolfGame:
         # Decide Targets
         wolf_target = None
         if good:
-            wolf_target = random.choice(good)
+             wolf_target = random.choice(good)
             
         confirmed_wolves = []
         seers = self.get_players_by_role(RoleType.SEER)
@@ -249,15 +249,42 @@ class WerewolfGame:
                      for p in candidates:
                          if p.id == pid:
                              confirmed_wolves.append(p)
+        
+        # --- Identify "Leader" for Good Team Voting Coordination ---
+        leader = None
+        seer = seers[0] if seers and seers[0].is_alive else None
+        
+        # Check if Seer is "Known" (Publicly Revealed)
+        # We check if at least one Good player (other than Seer) knows the Seer
+        seer_known = False
+        if seer:
+            for p in good:
+                if p != seer and p.knowledge_prob.get(seer.id, {}).get(RoleType.SEER, 0.0) >= 0.99:
+                    seer_known = True
+                    break
+        
+        if seer and seer_known:
+             leader = seer
+        elif self.sheriff and self.sheriff.is_alive:
+             leader = self.sheriff
+             
+        # Get Leader's Suggestion
+        leader_suggestion = None
+        if leader:
+            # Leader votes based on their own knowledge, without a suggestion (None)
+            leader_suggestion = leader.role.vote(self, candidates, leader.knowledge_prob, leader)
+            if leader_suggestion:
+                logger.info(f"Voting Leader {leader.id} ({leader.role.name}) suggests voting for Player {leader_suggestion.id}")
 
         # Cast Votes
         for voter in candidates:
             # Candidates to vote FOR (usually anyone alive)
-            # Self-voting allowed? usually yes.
             valid_targets = [p for p in candidates] # Everyone is a valid target
             
             # Delegate to Role
-            vote_target = voter.role.vote(self, valid_targets, voter.knowledge_prob)
+            # Pass leader_suggestion to all voters
+            # Roles decide whether to follow (Good roles usually follow, Wolves/Seer/Sheriff might differentiate)
+            vote_target = voter.role.vote(self, valid_targets, voter.knowledge_prob, voter, leader_suggestion)
             
             # Fallback if None (e.g. no info)? Random other
             if not vote_target:
