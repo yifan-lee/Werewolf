@@ -1,17 +1,17 @@
-from .base_strategies import BaseRandomStrategy
-from .werewolf_strategies import WerewolfHeuristicStrategy
-from .villager_strategies import VillagerRandomStrategy
-from .seer_strategies import SeerRandomStrategy
-from .witch_strategies import WitchRandomStrategy
-from .hunter_strategies import HunterRandomStrategy
-from .idiot_strategies import IdiotRandomStrategy
+from .base_strategies import BasicStrategy
+from .werewolf_strategies import WerewolfBasicStrategy
+from .villager_strategies import VillagerBasicStrategy
+from .seer_strategies import SeerBasicStrategy
+from .witch_strategies import WitchBasicStrategy
+from .hunter_strategies import HunterBasicStrategy
+from .idiot_strategies import IdiotBasicStrategy
 
 __all__ = [
-    "BaseRandomStrategy",
-    "WerewolfHeuristicStrategy",
-    "VillagerRandomStrategy",
-    "SeerRandomStrategy",
-    "WitchRandomStrategy",
-    "HunterRandomStrategy",
-    "IdiotRandomStrategy",
+    "BasicStrategy",
+    "WerewolfBasicStrategy",
+    "VillagerBasicStrategy",
+    "SeerBasicStrategy",
+    "WitchBasicStrategy",
+    "HunterBasicStrategy",
+    "IdiotBasicStrategy",
 ]

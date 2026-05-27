@@ -1,4 +1,4 @@
-from .base_strategies import BaseRandomStrategy
+from .base_strategies import BasicStrategy
 
-class IdiotRandomStrategy(BaseRandomStrategy):
+class IdiotBasicStrategy(BasicStrategy):
     pass

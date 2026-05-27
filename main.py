@@ -1,8 +1,8 @@
 from werewolf.constants import WinCondition, RoleType
 from werewolf.roles import Werewolf, Villager, Seer, Witch, Hunter, Idiot
 from werewolf.player.strategies import (
-    WerewolfHeuristicStrategy, VillagerRandomStrategy, SeerRandomStrategy, 
-    WitchRandomStrategy, HunterRandomStrategy, IdiotRandomStrategy
+    WerewolfBasicStrategy, VillagerBasicStrategy, SeerBasicStrategy, 
+    WitchBasicStrategy, HunterBasicStrategy, IdiotBasicStrategy
 )
 from werewolf.simulator import GameConfig, Simulator
 
@@ -15,12 +15,12 @@ def main():
     ]
     
     strategy_mapping = {
-        RoleType.WEREWOLF: WerewolfHeuristicStrategy,
-        RoleType.VILLAGER: VillagerRandomStrategy,
-        RoleType.SEER: SeerRandomStrategy,
-        RoleType.WITCH: WitchRandomStrategy,
-        RoleType.HUNTER: HunterRandomStrategy,
-        RoleType.IDIOT: IdiotRandomStrategy
+        RoleType.WEREWOLF: WerewolfBasicStrategy,
+        RoleType.VILLAGER: VillagerBasicStrategy,
+        RoleType.SEER: SeerBasicStrategy,
+        RoleType.WITCH: WitchBasicStrategy,
+        RoleType.HUNTER: HunterBasicStrategy,
+        RoleType.IDIOT: IdiotBasicStrategy
     }
     
     # 初始化 GameConfig，传入板子配置和策略映射

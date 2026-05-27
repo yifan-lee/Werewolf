@@ -28,26 +28,21 @@ class BasicStrategy(Strategy):
         return False
 
     def vote_sheriff(self, player: 'Player', game_state: 'Game', targets: List[int]) -> int:
-        alive_players = [
-            p.player_id for p in game_state.get_alive_players() 
-        ]
-        scores = {pid: self.get_kill_score(pid) for pid in alive_players}
+        if not targets:
+            targets = [
+                p.player_id for p in game_state.get_alive_players() if p.player_id != player.player_id
+            ]
+        scores = {pid: self.get_score(pid) for pid in targets}
         max_score = max(scores.values())
         top_targets = [pid for pid, s in scores.items() if s == max_score]
-        return random.choice(top_targets)
+        return random.choice(top_targets) if top_targets else None
 
-    def execute_death_effect(self, game_state: Any) -> Any:
+    def execute_death_effect(self, player: 'Player', game_state: Any) -> Any:
         # 默认没有特殊效果
         return None
 
-    def transfer_sheriff_strategy(self, game_state: Any) -> int:
-        alive_players = [
-            p.player_id for p in game_state.get_alive_players() 
-        ]
-        scores = {pid: self.get_kill_score(pid) for pid in alive_players}
-        max_score = max(scores.values())
-        top_targets = [pid for pid, s in scores.items() if s == max_score]
-        return random.choice(top_targets)
+    def transfer_sheriff_strategy(self, player: 'Player', game_state: Any) -> int:
+        return self.vote_sheriff(player, game_state, None)
 
     def last_words_strategy(self, player: 'Player', game_state: 'Game') -> Tuple[str, Dict[str, Any]]:
         return "我是好人，我死得很冤。", {}
@@ -62,11 +57,13 @@ class BasicStrategy(Strategy):
     def update_belief_after_speech(self, player: 'Player', speaker_id: int, speech: str, claims: Dict[str, Any], game_state: 'Game'):
         pass
 
-    def vote_day_strategy(self, game_state: Any) -> int:
-        alive_players = [
-            p.player_id for p in game_state.get_alive_players() 
+    def vote_day_strategy(self, player: 'Player', game_state: Any) -> int:
+        alive_others = [
+            p.player_id for p in game_state.get_alive_players() if p.player_id != player.player_id
         ]
-        scores = {pid: self.get_kill_score(pid) for pid in alive_players}
+        if not alive_others:
+            return None
+        scores = {pid: self.get_score(pid) for pid in alive_others}
         max_score = max(scores.values())
         top_targets = [pid for pid, s in scores.items() if s == max_score]
         return random.choice(top_targets)

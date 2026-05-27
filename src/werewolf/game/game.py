@@ -159,8 +159,7 @@ class Game:
         
         alive_players = self.get_alive_players()
         for p in alive_players:
-            strategy_res = p.elect_sheriff_strategy(self)
-            if strategy_res.get("run_for_sheriff"):
+            if p.elect_sheriff_strategy(self):
                 candidates.append(p.player_id)
         
         if not candidates:
@@ -172,8 +171,7 @@ class Game:
         # 投票 (只有非竞选者能投票)
         for p in alive_players:
             if p.player_id not in candidates:
-                strategy_res = p.elect_sheriff_strategy(self)
-                vote = strategy_res.get("vote_for")
+                vote = p.vote_sheriff(self, candidates)
                 if vote in candidates:
                     votes[vote] = votes.get(vote, 0) + 1
                     

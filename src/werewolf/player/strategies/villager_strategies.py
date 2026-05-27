@@ -1,8 +1,8 @@
 import random
 from typing import Any, Dict
-from .base_strategies import BaseRandomStrategy
+from .base_strategies import BasicStrategy
 
-class VillagerRandomStrategy(BaseRandomStrategy):
+class VillagerBasicStrategy(BasicStrategy):
     def update_belief_after_speech(self, player: 'Player', speaker_id: int, speech: str, claims: Dict[str, Any], game_state: 'Game'):
         if not claims:
             return
