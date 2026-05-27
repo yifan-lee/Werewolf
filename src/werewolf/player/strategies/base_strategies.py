@@ -4,7 +4,7 @@ import random
 from typing import Any, Dict, Tuple, List
 from ..strategy import Strategy
 
-class BaseRandomStrategy(Strategy):
+class BaseStrategy(Strategy):
     """
     提供随机策略的基础实现，处理所有白天共用的投票、发言逻辑。
     夜晚逻辑 act_night 和复杂的 update_belief 由具体子类重写。
@@ -28,8 +28,13 @@ class BaseRandomStrategy(Strategy):
         return False
 
     def vote_sheriff(self, player: 'Player', game_state: 'Game', targets: List[int]) -> int:
-        # 默认随机投票给警长候选人
-        return random.choice(targets)
+        alive_players = [
+            p.player_id for p in game_state.get_alive_players() 
+        ]
+        scores = {pid: self.get_kill_score(pid) for pid in alive_players}
+        max_score = max(scores.values())
+        top_targets = [pid for pid, s in scores.items() if s == max_score]
+        return random.choice(top_targets)
 
     def execute_death_effect(self, game_state: Any) -> Any:
         # 默认没有特殊效果

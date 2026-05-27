@@ -2,10 +2,10 @@ from werewolf.game.game import Game
 from werewolf.player.player import Player
 import random
 from typing import Any, Dict, List
-from .base_strategies import BaseRandomStrategy
+from .base_strategies import BasicStrategy
 from ...constants import Faction
 
-class WerewolfBaselineStrategy(BaseRandomStrategy):
+class WerewolfBasicStrategy(BasicStrategy):
 
     def act_night(self, player: 'Player', game_state: 'Game') -> Any:
         alive_non_wolves = [
@@ -46,39 +46,10 @@ class WerewolfBaselineStrategy(BaseRandomStrategy):
     def elect_sheriff_strategy(self, player: 'Player', game_state: 'Game') -> bool:
         return False
 
-    def vote_sheriff(self, player: 'Player', game_state: 'Game', targets: List['Player']):
-        def get_kill_score(pid: int) -> float:
-            b = self.belief.get(pid, {})
-            score = 0.0
-            # 优先级：预言家(1000) > 金水(800) > 女巫(600) > 银水(500) > 白痴(400) > 猎人(200) > 其他(0)
-            if b.get("is_seer") == 1.0:
-                score += 1000
-            elif b.get("is_gold_water") == 1.0:
-                score += 800
-            elif b.get("is_witch") == 1.0:
-                score += 600
-            elif b.get("is_silver_water") == 1.0:
-                score += 500
-            elif b.get("is_idiot") == 1.0:
-                score += 400
-            elif b.get("is_hunter") == 1.0:
-                score += 200
-            else:
-                # 给一个基础分加上随机波动，确保其他好人之间随机杀
-                score += random.random() * 10 
-            return score
-            
-        scores = {pid: get_kill_score(pid) for pid in targets}
-        max_score = max(scores.values())
-        top_targets = [pid for pid, s in scores.items() if s == max_score]
-        return random.choice(top_targets) if top_targets else random.choice(targets)
 
-    def transfer_sheriff_strategy(self, player: 'Player', game_state: Any) -> Any:
-        return self.act_night(player, game_state)
-
-    
-
-    def update_belief_after_speech(self, player: 'Player', speaker_id: int, speech: str, claims: Dict[str, Any], game_state: 'Game'):
+    def update_belief_after_last_words(self, player: 'Player', speaker_id: int, last_words: str, claims: Dict[str, Any], game_state: 'Game'):
+        if game_state.players[speaker_id].role.faction == Faction.WEREWOLF:
+            return
         if not claims:
             return
             
@@ -121,6 +92,9 @@ class WerewolfBaselineStrategy(BaseRandomStrategy):
             if silver_water not in self.belief:
                 self.belief[silver_water] = {}
             self.belief[silver_water]["is_silver_water"] = 1.0
+
+    def update_belief_after_speech(self, player: 'Player', speaker_id: int, speech: str, claims: Dict[str, Any], game_state: 'Game'):
+        self.update_belief_after_last_words(player, speaker_id, speech, claims, game_state)
 
 
 
