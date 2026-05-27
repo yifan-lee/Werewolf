@@ -65,10 +65,10 @@ class Game:
 
         # 1. 遗言环节 (首夜死亡或白天被票决)
         if (is_night and self.day_count == 1) or is_vote:
-            last_words = player.last_words_strategy(self)
+            last_words, claims = player.last_words_strategy(self)
             self.log(f"玩家 {player_id} 发表遗言: {last_words}")
             for p in self.get_alive_players():
-                p.update_belief_after_last_words(player_id, last_words, self)
+                p.update_belief_after_last_words(player_id, last_words, claims, self)
 
         # 2. 移交警徽
         if self.sheriff_id == player_id:
@@ -120,13 +120,15 @@ class Game:
         for god in gods:
             if god.role.role_type == RoleType.SEER:
                 # 预言家已经在 player 内部通过 act_night 获取信息了
-                god.role.perform_night_action(self, god)
+                result = god.role.perform_night_action(self, god)
+                god.receive_night_feedback(result)
             elif god.role.role_type == RoleType.WITCH:
                 # 告知女巫狼人的刀人目标 (通过 game_state 给女巫提供接口或者约定)
                 # 为了简单起见，我们把刀人信息暂存于一个字典传给女巫
                 # 这里我们假设策略能通过 game_state 拿到信息，我们给 Game 临时加个属性
                 self.current_wolf_kill = wolf_kill
                 action = god.role.perform_night_action(self, god)
+                god.receive_night_feedback(action)
                 if action:
                     if action.get("save"):
                         witch_save = True
@@ -201,11 +203,11 @@ class Game:
         alive_players = self.get_alive_players()
         # 发言顺序本应由警长决定，此处简单用从小到大
         for p in alive_players:
-            speech = p.speech_day_strategy(self)
+            speech, claims = p.speech_day_strategy(self)
             self.log(f"玩家 {p.player_id} 发言: {speech}")
             for other_p in self.get_alive_players():
                 if other_p.player_id != p.player_id:
-                    other_p.update_belief_after_speech(p.player_id, speech, self)
+                    other_p.update_belief_after_speech(p.player_id, speech, claims, self)
                     
         # 投票环节
         self.phase = GamePhase.DAY_VOTE

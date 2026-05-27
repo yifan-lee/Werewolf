@@ -1,4 +1,4 @@
-from typing import Any, Dict
+from typing import Any, Dict, List
 from .strategy import Strategy
 
 class Player:
@@ -14,31 +14,50 @@ class Player:
         # 认知状态 (belief state)，初始可以是一个空的字典，或者在游戏开始时由策略初始化
         self.belief_state: Dict[str, Any] = {}
 
+    
+    ## Night Phase
+
+    def receive_night_feedback(self, result: Any):
+        self.strategy.receive_night_feedback(self, result)
+
     def act_night(self, game_state: Any) -> Any:
         return self.strategy.act_night(self, game_state)
 
-    def elect_sheriff_strategy(self, game_state: Any) -> Dict[str, Any]:
+    
+    ## Day Phase
+
+    def elect_sheriff_strategy(self, game_state: Any) -> bool:
         return self.strategy.elect_sheriff_strategy(self, game_state)
 
-    def speech_day_strategy(self, game_state: Any) -> str:
-        return self.strategy.speech_day_strategy(self, game_state)
+    def vote_sheriff(self, game_state: Any, targets: List[int]) -> int:
+        return self.strategy.vote_sheriff(self, game_state, targets)
 
-    def last_words_strategy(self, game_state: Any) -> str:
+    def execute_death_effect(self, game_state: Any) -> Any:
+        return self.strategy.execute_death_effect(self, game_state)
+
+    def transfer_sheriff_strategy(self, game_state: Any) -> int:
+        return self.strategy.transfer_sheriff_strategy(self, game_state)
+
+    def last_words_strategy(self, game_state: Any) -> tuple[str, Dict[str, Any]]:
         return self.strategy.last_words_strategy(self, game_state)
 
-    def update_belief_after_speech(self, speaker_id: int, speech: str, game_state: Any):
-        self.strategy.update_belief_after_speech(self, speaker_id, speech, game_state)
+    def update_belief_after_last_words(self, speaker_id: int, last_words: str, claims: Dict[str, Any], game_state: Any):
+        self.strategy.update_belief_after_last_words(self, speaker_id, last_words, claims, game_state)
 
-    def update_belief_after_last_words(self, speaker_id: int, last_words: str, game_state: Any):
-        self.strategy.update_belief_after_last_words(self, speaker_id, last_words, game_state)
+
+    def speech_day_strategy(self, game_state: Any) -> tuple[str, Dict[str, Any]]:
+        return self.strategy.speech_day_strategy(self, game_state)
+
+
+    def update_belief_after_speech(self, speaker_id: int, speech: str, claims: Dict[str, Any], game_state: Any):
+        self.strategy.update_belief_after_speech(self, speaker_id, speech, claims, game_state)
 
     def vote_day_strategy(self, game_state: Any) -> int:
         if self.is_idiot_revealed:
             return None  # 翻牌白痴没有投票权
         return self.strategy.vote_day_strategy(self, game_state)
 
-    def transfer_sheriff_strategy(self, game_state: Any) -> int:
-        return self.strategy.transfer_sheriff_strategy(self, game_state)
+
 
     def __repr__(self):
         status = "Alive" if self.is_alive else "Dead"

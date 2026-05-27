@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Any, Dict
+from typing import Any, Dict, Tuple
 
 class Strategy(ABC):
     """
@@ -7,9 +7,17 @@ class Strategy(ABC):
     具体的AI或者随机策略都需要继承该类。
     """
     
+    def __init__(self):
+        self.memory: Dict[str, Any] = {}
+
     @abstractmethod
     def act_night(self, player: 'Player', game_state: 'Game') -> Any:
         """夜晚行动策略。例如狼人选择刀谁，女巫选择救谁或毒谁。"""
+        pass
+
+    @abstractmethod
+    def receive_night_feedback(self, player: 'Player', result: Any):
+        """接收夜晚行动的客观结算结果（例如验人结果）"""
         pass
 
     @abstractmethod
@@ -23,22 +31,22 @@ class Strategy(ABC):
         pass
     
     @abstractmethod
-    def speech_day_strategy(self, player: 'Player', game_state: 'Game') -> str:
-        """白天常规发言策略。返回发言内容。"""
+    def speech_day_strategy(self, player: 'Player', game_state: 'Game') -> Tuple[str, Dict[str, Any]]:
+        """白天常规发言策略。返回 (发言文字内容, 结构化语义标签)"""
         pass
 
     @abstractmethod
-    def last_words_strategy(self, player: 'Player', game_state: 'Game') -> str:
-        """发表遗言策略。返回遗言内容。"""
+    def last_words_strategy(self, player: 'Player', game_state: 'Game') -> Tuple[str, Dict[str, Any]]:
+        """发表遗言策略。返回 (遗言文字内容, 结构化语义标签)"""
         pass
 
     @abstractmethod
-    def update_belief_after_speech(self, player: 'Player', speaker_id: int, speech: str, game_state: 'Game'):
+    def update_belief_after_speech(self, player: 'Player', speaker_id: int, speech: str, claims: Dict[str, Any], game_state: 'Game'):
         """听到常规发言后，更新自身的 belief_state"""
         pass
 
     @abstractmethod
-    def update_belief_after_last_words(self, player: 'Player', speaker_id: int, last_words: str, game_state: 'Game'):
+    def update_belief_after_last_words(self, player: 'Player', speaker_id: int, last_words: str, claims: Dict[str, Any], game_state: 'Game'):
         """听到遗言后，更新自身的 belief_state"""
         pass
 

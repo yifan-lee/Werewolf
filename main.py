@@ -1,7 +1,7 @@
 from werewolf.constants import WinCondition, RoleType
 from werewolf.roles import Werewolf, Villager, Seer, Witch, Hunter, Idiot
 from werewolf.player.strategies import (
-    WerewolfRandomStrategy, VillagerRandomStrategy, SeerRandomStrategy, 
+    WerewolfHeuristicStrategy, VillagerRandomStrategy, SeerRandomStrategy, 
     WitchRandomStrategy, HunterRandomStrategy, IdiotRandomStrategy
 )
 from werewolf.simulator import GameConfig, Simulator
@@ -15,7 +15,7 @@ def main():
     ]
     
     strategy_mapping = {
-        RoleType.WEREWOLF: WerewolfRandomStrategy,
+        RoleType.WEREWOLF: WerewolfHeuristicStrategy,
         RoleType.VILLAGER: VillagerRandomStrategy,
         RoleType.SEER: SeerRandomStrategy,
         RoleType.WITCH: WitchRandomStrategy,
@@ -31,7 +31,7 @@ def main():
     )
     
     # 初始化模拟器，模拟跑 100 局，串行执行方便看日志或者排查bug，可以设为 parallel=True 提速
-    simulator = Simulator(config, num_games=100)
+    simulator = Simulator(config, num_games=1000)
     
     # 开始运行 MCMC (Monte Carlo) 模拟
     simulator.run(parallel=True)
