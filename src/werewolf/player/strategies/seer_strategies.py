@@ -1,3 +1,5 @@
+from werewolf.game.game import Game
+from werewolf.player.player import Player
 import random
 from typing import Any
 from .base_strategies import BaseRandomStrategy

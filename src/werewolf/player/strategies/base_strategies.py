@@ -4,7 +4,7 @@ import random
 from typing import Any, Dict, Tuple, List
 from ..strategy import Strategy
 
-class BaseStrategy(Strategy):
+class BasicStrategy(Strategy):
     """
     提供随机策略的基础实现，处理所有白天共用的投票、发言逻辑。
     夜晚逻辑 act_night 和复杂的 update_belief 由具体子类重写。
