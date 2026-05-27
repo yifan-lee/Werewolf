@@ -1,6 +1,9 @@
-from werewolf.constants import WinCondition
-from werewolf.roles.concrete import Werewolf, Villager, Seer, Witch, Hunter, Idiot
-from werewolf.player.random_strategy import RandomStrategy
+from werewolf.constants import WinCondition, RoleType
+from werewolf.roles import Werewolf, Villager, Seer, Witch, Hunter, Idiot
+from werewolf.player.strategies import (
+    WerewolfRandomStrategy, VillagerRandomStrategy, SeerRandomStrategy, 
+    WitchRandomStrategy, HunterRandomStrategy, IdiotRandomStrategy
+)
 from werewolf.simulator import GameConfig, Simulator
 
 def main():
@@ -11,10 +14,19 @@ def main():
         Seer(), Witch(), Hunter(), Idiot()
     ]
     
-    # 初始化 GameConfig，传入板子配置和采用的策略类
+    strategy_mapping = {
+        RoleType.WEREWOLF: WerewolfRandomStrategy,
+        RoleType.VILLAGER: VillagerRandomStrategy,
+        RoleType.SEER: SeerRandomStrategy,
+        RoleType.WITCH: WitchRandomStrategy,
+        RoleType.HUNTER: HunterRandomStrategy,
+        RoleType.IDIOT: IdiotRandomStrategy
+    }
+    
+    # 初始化 GameConfig，传入板子配置和策略映射
     config = GameConfig(
         roles_setup=roles_setup,
-        strategy_class=RandomStrategy,
+        strategy_mapping=strategy_mapping,
         win_condition=WinCondition.KILL_SIDE  # 屠边局
     )
     

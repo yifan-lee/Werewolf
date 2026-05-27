@@ -3,20 +3,20 @@ from typing import List, Type, Dict
 from .player.strategy import Strategy
 from .player.player import Player
 from .game.game import Game
-from .constants import GameResult, WinCondition
+from .constants import GameResult, WinCondition, RoleType
 
 class GameConfig:
     def __init__(self, 
                  roles_setup: List['Role'], 
-                 strategy_class: Type[Strategy], 
+                 strategy_mapping: Dict[RoleType, Type[Strategy]], 
                  win_condition: WinCondition = WinCondition.KILL_SIDE):
         """
-        :param roles_setup: 角色实例列表，比如 [Werewolf(), Werewolf(), Villager(), Seer() ...]
-        :param strategy_class: 将会实例化并分配给每一个玩家的策略类 (也可以改为每个座位不同策略)
+        :param roles_setup: 角色实例列表
+        :param strategy_mapping: RoleType 到 Strategy 类的映射字典
         :param win_condition: 胜利条件
         """
         self.roles_setup = roles_setup
-        self.strategy_class = strategy_class
+        self.strategy_mapping = strategy_mapping
         self.win_condition = win_condition
         self.num_players = len(roles_setup)
 
@@ -25,7 +25,10 @@ class GameConfig:
         for i, role in enumerate(self.roles_setup):
             # 座位号从 1 开始
             player_id = i + 1
-            strategy = self.strategy_class()
+            strategy_cls = self.strategy_mapping.get(role.role_type)
+            if not strategy_cls:
+                raise ValueError(f"No strategy mapped for role type: {role.role_type}")
+            strategy = strategy_cls()
             player = Player(player_id, role, strategy)
             players.append(player)
         return players
@@ -44,12 +47,18 @@ class Simulator:
     def _run_single_game(self, seed: int) -> GameResult:
         import random
         random.seed(seed)
-        players = self.config.create_players()
-        # 打乱座位 (如果需要的话，当前是顺序排列角色然后绑定ID，打乱角色更合理)
-        roles = [p.role for p in players]
+        
+        # 打乱角色
+        roles = list(self.config.roles_setup)
         random.shuffle(roles)
-        for i, p in enumerate(players):
-            p.role = roles[i]
+        
+        # 根据打乱后的角色重新生成带有正确 Strategy 的 Player
+        players = []
+        for i, role in enumerate(roles):
+            player_id = i + 1
+            strategy_cls = self.config.strategy_mapping.get(role.role_type)
+            strategy = strategy_cls()
+            players.append(Player(player_id, role, strategy))
             
         game = Game(players, self.config.win_condition)
         result = game.run()
