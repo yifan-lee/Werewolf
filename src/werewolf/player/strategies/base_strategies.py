@@ -39,7 +39,10 @@ class BaseRandomStrategy(Strategy):
         alive_players = [
             p.player_id for p in game_state.get_alive_players() 
         ]
-        return random.choice(alive_players)
+        scores = {pid: self.get_kill_score(pid) for pid in alive_players}
+        max_score = max(scores.values())
+        top_targets = [pid for pid, s in scores.items() if s == max_score]
+        return random.choice(top_targets)
 
     def last_words_strategy(self, player: 'Player', game_state: 'Game') -> Tuple[str, Dict[str, Any]]:
         return "我是好人，我死得很冤。", {}
@@ -58,25 +61,32 @@ class BaseRandomStrategy(Strategy):
         alive_players = [
             p.player_id for p in game_state.get_alive_players() 
         ]
-        return random.choice(alive_players)
+        scores = {pid: self.get_kill_score(pid) for pid in alive_players}
+        max_score = max(scores.values())
+        top_targets = [pid for pid, s in scores.items() if s == max_score]
+        return random.choice(top_targets)
 
+        
 
+    ### Support functions
 
-
-    
-
-
-
-    
-
-    def vote_day_strategy(self, player: 'Player', game_state: 'Game') -> int:
-        alive_others = [p.player_id for p in game_state.get_alive_players() if p.player_id != player.player_id]
-        if alive_others:
-            return random.choice(alive_others)
-        return None
-
-    def transfer_sheriff_strategy(self, player: 'Player', game_state: 'Game') -> int:
-        alive_others = [p.player_id for p in game_state.get_alive_players() if p.player_id != player.player_id]
-        if alive_others:
-            return random.choice(alive_others)
-        return None
+    def get_score(self, pid: int) -> float:
+        b = self.belief.get(pid, {})
+        score = 0.0
+        # 优先级：预言家(1000) > 金水(800) > 女巫(600) > 银水(500) > 白痴(400) > 猎人(200) > 其他(0)
+        if b.get("is_seer") == 1.0:
+            score += 1000
+        elif b.get("is_gold_water") == 1.0:
+            score += 800
+        elif b.get("is_witch") == 1.0:
+            score += 600
+        elif b.get("is_silver_water") == 1.0:
+            score += 500
+        elif b.get("is_idiot") == 1.0:
+            score += 400
+        elif b.get("is_hunter") == 1.0:
+            score += 200
+        else:
+            # 给一个基础分加上随机波动，确保其他好人之间随机杀
+            score += random.random() * 10 
+        return score
