@@ -96,6 +96,24 @@ class SeerBasicStrategy(BasicStrategy):
             return speech, claims
         return "我是预言家，没来得及验出结果就死了。", claims
 
+    def update_belief_after_last_words(self, player: 'Player', speaker_id: int, last_words: str, claims: Dict[str, Any], game_state: 'Game'):
+        if not claims:
+            return
+
+        if speaker_id not in self.belief:
+            self.belief[speaker_id] = {}
+            
+        role_claim = claims.get("jump_role")
+
+        if role_claim:
+            self.belief[speaker_id][f"is_{role_claim.lower()}"] = 1.0
+
+        silver_water = claims.get("silver_water")
+        if silver_water is not None:
+            if silver_water not in self.belief:
+                self.belief[silver_water] = {}
+            self.belief[silver_water]["is_silver_water"] = 1.0
+
     def speech_day_strategy(self, player: 'Player', game_state: 'Game') -> tuple[str, dict]:
         self._update_sheriff_flow(player, game_state)
         flow = self.memory.get("sheriff_flow", [])
@@ -117,6 +135,9 @@ class SeerBasicStrategy(BasicStrategy):
             
         self.memory.pop("last_result", None)
         return speech, claims
+
+    def update_belief_after_speech(self, player: 'Player', speaker_id: int, speech: str, claims: Dict[str, Any], game_state: 'Game'):
+        self.update_belief_after_last_words(player, speaker_id, speech, claims, game_state)
 
     def vote_day_strategy(self, player: 'Player', game_state: 'Game') -> int:
         alive_others = [p.player_id for p in game_state.get_alive_players() if p.player_id != player.player_id]

@@ -48,14 +48,36 @@ class BasicStrategy(Strategy):
         return "我是好人，我死得很冤。", {}
 
     def update_belief_after_last_words(self, player: 'Player', speaker_id: int, last_words: str, claims: Dict[str, Any], game_state: 'Game'):
-        pass
+        if not claims:
+            return
+
+        if speaker_id not in self.belief:
+            self.belief[speaker_id] = {}
+            
+        role_claim = claims.get("jump_role")
+
+        if role_claim:
+            self.belief[speaker_id][f"is_{role_claim.lower()}"] = 1.0
+
+        gold_water = claims.get("gold_water")
+        if gold_water is not None:
+            for target in claims.get("gold_water", []):
+                if target not in self.belief:
+                    self.belief[target] = {}
+                self.belief[target]["is_gold_water"] = 1.0
+
+        silver_water = claims.get("silver_water")
+        if silver_water is not None:
+            if silver_water not in self.belief:
+                self.belief[silver_water] = {}
+            self.belief[silver_water]["is_silver_water"] = 1.0
 
     def speech_day_strategy(self, player: 'Player', game_state: 'Game') -> Tuple[str, Dict[str, Any]]:
         return f"我是好人，过。(来自 {player.role.name} 的随机发言)", {}
 
 
     def update_belief_after_speech(self, player: 'Player', speaker_id: int, speech: str, claims: Dict[str, Any], game_state: 'Game'):
-        pass
+        self.update_belief_after_last_words(player, speaker_id, speech, claims, game_state)
 
     def vote_day_strategy(self, player: 'Player', game_state: Any) -> int:
         alive_others = [
