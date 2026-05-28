@@ -72,6 +72,12 @@ class BasicStrategy(Strategy):
                 self.belief[silver_water] = {}
             self.belief[silver_water]["is_silver_water"] = 1.0
 
+        check_kill = claims.get("check_kill")
+        if check_kill is not None:
+            if check_kill not in self.belief:
+                self.belief[check_kill] = {}
+            self.belief[check_kill]["is_werewolf"] = 1.0
+
     def speech_day_strategy(self, player: 'Player', game_state: 'Game') -> Tuple[str, Dict[str, Any]]:
         return f"我是好人，过。(来自 {player.role.name} 的随机发言)", {}
 
@@ -110,6 +116,8 @@ class BasicStrategy(Strategy):
             score += 400
         elif b.get("is_hunter") == 1.0:
             score += 200
+        elif b.get("is_werewolf") == 1.0:
+            score -= 1000
         else:
             # 给一个基础分加上随机波动，确保其他好人之间随机杀
             score += random.random() * 10 
