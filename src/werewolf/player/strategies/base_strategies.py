@@ -91,7 +91,7 @@ class BasicStrategy(Strategy):
         ]
         if not alive_others:
             return None
-        scores = {pid: self.get_score(pid) for pid in alive_others}
+        scores = {pid: -self.get_score(pid) for pid in alive_others}
         max_score = max(scores.values())
         top_targets = [pid for pid, s in scores.items() if s == max_score]
         return random.choice(top_targets)

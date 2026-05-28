@@ -6,4 +6,4 @@ from .base_strategies import BasicStrategy
 
 class HunterBasicStrategy(BasicStrategy):
     def execute_death_effect(self, player: 'Player', game_state: 'Game') -> Any:
-        
+        return self.vote_day_strategy(player, game_state)
