@@ -1,4 +1,5 @@
 from typing import Any, Dict, List
+from collections import defaultdict
 from .strategy import Strategy
 
 class Player:
@@ -11,8 +12,9 @@ class Player:
         # 白痴的被动状态
         self.is_idiot_revealed = False  # 如果是白痴且被放逐翻牌，则为 True，失去投票权和被选举权
         
-        # 认知状态 (belief state)，初始可以是一个空的字典，或者在游戏开始时由策略初始化
-        self.belief_state: Dict[str, Any] = {}
+        # 认知状态 (belief state)，使用 defaultdict 避免频繁初始化
+        self.belief_state: Dict[int, Dict[str, Any]] = defaultdict(dict)
+        self.belief_state[self.player_id][f"is_{self.role.role_type.name.lower()}"] = 1.0
 
     
     ## Night Phase
@@ -43,6 +45,9 @@ class Player:
 
     def update_belief_after_last_words(self, speaker_id: int, last_words: str, claims: Dict[str, Any], game_state: Any):
         self.strategy.update_belief_after_last_words(self, speaker_id, last_words, claims, game_state)
+
+    def update_belief_after_badge_transfer(self, dead_sheriff_id: int, new_sheriff_id: int, game_state: Any):
+        self.strategy.update_belief_after_badge_transfer(self, dead_sheriff_id, new_sheriff_id, game_state)
 
 
     def speech_day_strategy(self, game_state: Any) -> tuple[str, Dict[str, Any]]:

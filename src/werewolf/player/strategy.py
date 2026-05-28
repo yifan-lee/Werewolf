@@ -42,7 +42,12 @@ class Strategy(ABC):
 
     @abstractmethod
     def update_belief_after_speech(self, player: 'Player', speaker_id: int, speech: str, claims: Dict[str, Any], game_state: 'Game'):
-        """听到常规发言后，更新自身的 belief_state"""
+        """在白天某人发完言后，更新自己的信念/知识库。"""
+        pass
+
+    @abstractmethod
+    def update_belief_after_badge_transfer(self, player: 'Player', dead_sheriff_id: int, new_sheriff_id: int, game_state: 'Game'):
+        """在警徽移交或撕毁后，更新自己的信念/知识库。"""
         pass
 
     @abstractmethod
@@ -51,8 +56,8 @@ class Strategy(ABC):
         pass
 
     @abstractmethod
-    def vote_day_strategy(self, player: 'Player', game_state: 'Game') -> int:
-        """白天放逐投票策略。返回要投票的玩家 ID，或者返回 None 表示弃票。"""
+    def vote_day_strategy(self, player: 'Player', game_state: 'Game') -> Tuple[int, str]:
+        """白天放逐投票策略。返回 (投票的玩家ID, 投票理由)。如果弃票返回 (None, 理由)。"""
         pass
 
     @abstractmethod

@@ -80,11 +80,14 @@ class Game:
                 self.sheriff_id = None
                 self.log(f"玩家 {player_id} 撕毁了警徽。")
 
+            for p in self.get_alive_players():
+                p.update_belief_after_badge_transfer(player_id, self.sheriff_id, self)
+
         # 3. 猎人开枪 (如果在夜晚是被毒死，通常不能开枪。这里简写，若需判定需由女巫毒杀传入特定标识)
         # 简单起见，默认可以开枪，复杂规则可通过添加 death_reason 完善
         if player.role.role_type == RoleType.HUNTER:
             # Note: 此处简化，如果需要“被毒不能开枪”，应在 night phase 记录死因
-            target = player.act_night(self) # 借用 act_night 接口或专用接口，此处先用 act_night
+            target = player.execute_death_effect(self)
             if target and target in self.alive_players:
                 self.log(f"猎人 玩家 {player_id} 开枪带走了 玩家 {target}。")
                 self.handle_death(target)
@@ -167,6 +170,15 @@ class Game:
             return
             
         self.log(f"竞选警长的玩家有: {candidates}")
+
+        # 候选人发言
+        for pid in candidates:
+            p = self.players[pid]
+            speech, claims = p.speech_day_strategy(self)
+            self.log(f"竞选者 玩家 {p.player_id} 发言: {speech}")
+            for other_p in self.get_alive_players():
+                if other_p.player_id != p.player_id:
+                    other_p.update_belief_after_speech(p.player_id, speech, claims, self)
         
         # 投票 (只有非竞选者能投票)
         for p in alive_players:
@@ -183,10 +195,8 @@ class Game:
         else:
             self.log("警长竞选流局。")
 
-    def run_day_phase(self):
-        self.phase = GamePhase.DAY_SPEECH
-        self.log("天亮了。")
-        
+    def resolve_night_deaths(self):
+        self.log("宣布昨夜死讯环节。")
         # 宣布死者并处理遗言/技能
         if not self.night_deaths:
             self.log("昨夜是平安夜。")
@@ -194,8 +204,10 @@ class Game:
             self.log(f"昨夜死亡的玩家是: {self.night_deaths}")
             for d in self.night_deaths:
                 self.handle_death(d, is_night=True)
-                
-        if self.check_win_condition(): return
+
+    def run_day_phase(self):
+        self.phase = GamePhase.DAY_SPEECH
+        self.log("开始白天发言。")
         
         # 发言环节
         alive_players = self.get_alive_players()
@@ -211,10 +223,18 @@ class Game:
         self.phase = GamePhase.DAY_VOTE
         votes = {}
         for p in self.get_alive_players():
-            target = p.vote_day_strategy(self)
+            target_info = p.vote_day_strategy(self)
+            if isinstance(target_info, tuple):
+                target, reason = target_info
+            else:
+                target, reason = target_info, "无特定理由"
+                
             if target and target in self.alive_players:
+                self.log(f"玩家 {p.player_id} ({p.role.name}) 投票给了 玩家 {target}。理由: {reason}")
                 weight = 1.5 if self.sheriff_id == p.player_id else 1.0
                 votes[target] = votes.get(target, 0) + weight
+            else:
+                self.log(f"玩家 {p.player_id} ({p.role.name}) 弃票。理由: {reason}")
                 
         if votes:
             exiled = max(votes, key=votes.get)
@@ -235,12 +255,19 @@ class Game:
     def run(self) -> GameResult:
         """主循环"""
         self.log("游戏开始。")
+        self.log("玩家身份如下:")
+        for pid, p in self.players.items():
+            self.log(f"玩家 {pid}: {p.role.name}")
         while not self.winner:
             self.run_night_phase()
             if self.check_win_condition(): break
             
+            self.log("天亮了。")
             if self.day_count == 1:
                 self.run_election_phase()
+                
+            self.resolve_night_deaths()
+            if self.check_win_condition(): break
                 
             self.run_day_phase()
             if self.check_win_condition(): break
